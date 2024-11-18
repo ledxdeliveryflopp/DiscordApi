@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "discordapi"
+version = "1.0"
+description = "api похожая на дискорд"
+authors = ["ledxDeliveryflopp <korstim18@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "^0.115.5"
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+pydantic-settings = "^2.6.1"
+psycopg2-binary = "^2.9.10"
+asyncpg = "^0.30.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
