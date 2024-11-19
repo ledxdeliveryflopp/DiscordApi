@@ -1,0 +1,50 @@
+version: "3.8"
+
+services:
+
+  database:
+    container_name: database
+    image: postgres
+    restart: on-failure
+    env_file:
+      - .env
+    volumes:
+      - database:/data/
+    ports:
+      - "5432:5432"
+    networks:
+      - sql
+
+  nginx:
+    image: nginx
+    container_name: nginx
+    ports:
+      - protocol: tcp
+        target: 8000
+        published: 8881
+    env_file:
+      - .env
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - nginx
+
+  user_microservice:
+    container_name: user
+    build:
+      ./user_microservice
+    ports:
+      - "7000:7000"
+    networks:
+      - sql
+      - nginx
+
+
+volumes:
+  database:
+
+networks:
+  sql:
+    external: true
+  nginx:
+    external: true
