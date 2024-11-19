@@ -19,7 +19,7 @@ jobs:
       - name: Build docker nginx network
         run: docker network create nginx
       - name: Build docker containers
-        run: docker-compose up -d --build
+        run: docker compose up -d --build
       - name: Check running containers
         run: docker ps -a
       - name: Run tests
