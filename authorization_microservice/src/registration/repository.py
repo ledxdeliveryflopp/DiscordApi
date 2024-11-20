@@ -1,30 +1,23 @@
 from dataclasses import dataclass
-from typing import Any, Sequence
-
 from fastapi import HTTPException
-from sqlalchemy import Select, Result, CursorResult, Row, RowMapping
+from sqlalchemy import Select, Result, CursorResult
 from starlette.requests import Request
 
+from src.registration.models import UserModel
+from src.registration.schemas import CreateUserSchemas
+from src.registration.utils import get_user_country, hash_password
 from src.settings.exceptions import UserExistException
 from src.settings.service import BaseService
-from src.user.models import UserModel
-from src.user.schemas import CreateUserSchemas
-from src.user.utils import hash_password, get_user_country
 
 
 @dataclass
-class UserRepository(BaseService):
-    """Репозиторий пользователей"""
+class RegistrationRepository(BaseService):
+    """Репозиторий регистрации"""
 
     async def _repository_find_user_by_email(self, email: str) -> Result | CursorResult:
         """Поиск пользователя по email"""
         user = await self.session.execute(Select(UserModel).where(UserModel.email == email))
         return user.scalar()
-
-    async def _repository_find_user_by_username(self, username: str) -> Sequence[Row[Any] | RowMapping | Any]:
-        """Поиск пользователя по username"""
-        user = await self.session.execute(Select(UserModel).where(UserModel.username == username))
-        return user.scalars().all()
 
     async def _repository_create_user(self, schemas: CreateUserSchemas, request: Request) -> dict | HTTPException:
         """Создание пользователя"""
