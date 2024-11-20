@@ -13,15 +13,24 @@ class DetailedHTTPException(HTTPException):
 
 
 class SaveException(DetailedHTTPException):
+    """Ошибка сохранения в БД"""
     status_code = 400
     detail = "save error."
 
 
 class UserExistException(DetailedHTTPException):
+    """Пользователь уже существует"""
     status_code = 400
     detail = "User already exist."
 
 
 class UserDontExistException(DetailedHTTPException):
+    """Пользователя не существует"""
     status_code = 404
     detail = "User dont exist."
+
+
+class UserIpException(DetailedHTTPException):
+    """Не удалось определить страну пользователя"""
+    status_code = 400
+    detail = "It is not possible to determine the country, turn off the VPN or try later."

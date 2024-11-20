@@ -2,6 +2,7 @@ import httpx
 from passlib.context import CryptContext
 from starlette.requests import Request
 
+from src.settings.exceptions import UserIpException
 from src.settings.settings import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -18,12 +19,14 @@ async def get_user_country(request: Request) -> str:
         async with httpx.AsyncClient() as client:
             user_ip_request = httpx.get("https://ipinfo.io/ip")
             user_ip = user_ip_request.text
+            if not user_ip or user_ip_request.status_code != 200:
+                client_host = request.headers.get("accept-language")
+                country = client_host.split(",")[0]
+                return country
             request = await client.get(f"{settings.ipinfo_settings.ipinfo_url}{user_ip}"
                                        f"?token={settings.ipinfo_settings.ipinfo_token}")
             data = request.json()
-            user_country = data.get("country")
-        return user_country
-    except Exception as exception:
-        client_host = request.headers.get("accept-language")
-        country = client_host.split(",")[0]
+            country = data.get("country")
         return country
+    except Exception as exception:
+        raise UserIpException
