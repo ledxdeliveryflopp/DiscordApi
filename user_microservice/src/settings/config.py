@@ -11,6 +11,7 @@ class AlembicIni:
     config = configparser.ConfigParser()
 
     def set_database_url(self) -> None:
+        """Установка database url в alembic ini"""
         self.config.read('alembic.ini')
         self.config.set("alembic", "sqlalchemy.url", settings.database_settings.get_full_db_path)
         with open('alembic.ini', 'w') as config_file:

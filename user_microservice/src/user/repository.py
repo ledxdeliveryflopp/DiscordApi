@@ -9,7 +9,7 @@ from src.settings.exceptions import UserExistException
 from src.settings.service import BaseService
 from src.user.models import UserModel
 from src.user.schemas import CreateUserSchemas
-from src.user.utils import hash_password
+from src.user.utils import hash_password, get_user_country
 
 
 @dataclass
@@ -31,9 +31,8 @@ class UserRepository(BaseService):
         user = await self._repository_find_user_by_email(schemas.email)
         if user:
             raise UserExistException
-        client_host = request.headers.get("accept-language")
-        country = client_host.split(",")[0]
+        user_country = await get_user_country(request)
         new_user = UserModel(**schemas.dict(exclude={"password", "country"}), password=hash_password(schemas.password),
-                             country=country)
+                             country=user_country)
         await self.save_object(new_user)
         return {"detail": "success"}
