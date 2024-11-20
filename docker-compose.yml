@@ -1,4 +1,4 @@
-version: "3.8"
+name: discordapi
 
 services:
 
@@ -11,7 +11,7 @@ services:
     volumes:
       - database:/data/
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT}:${POSTGRES_PORT}"
     networks:
       - sql
 
@@ -45,6 +45,4 @@ volumes:
 
 networks:
   sql:
-    external: true
   nginx:
-    external: true
