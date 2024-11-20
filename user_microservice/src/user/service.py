@@ -9,7 +9,6 @@ from starlette.requests import Request
 from src.settings.database import get_session
 from src.settings.exceptions import UserDontExistException
 from src.user.repository import UserRepository
-from src.user.schemas import CreateUserSchemas
 
 
 @dataclass
@@ -22,10 +21,6 @@ class UserService(UserRepository):
         if not user:
             raise UserDontExistException
         return user
-
-    async def create_user(self, schemas: CreateUserSchemas, request: Request) -> dict | HTTPException:
-        """Создание пользователя"""
-        return await self._repository_create_user(schemas, request)
 
 
 async def init_user_service(session: AsyncSession = Depends(get_session)):

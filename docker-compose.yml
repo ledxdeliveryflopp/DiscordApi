@@ -39,6 +39,16 @@ services:
       - sql
       - nginx
 
+  authorization_microservice:
+    container_name: authorization
+    build:
+      ./authorization_microservice
+    ports:
+      - "8000:8000"
+    networks:
+      - sql
+      - nginx
+
 
 volumes:
   database:
