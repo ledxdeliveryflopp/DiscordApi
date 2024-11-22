@@ -28,6 +28,14 @@ class DatabaseSettings(BaseSettings):
                 f"{self.host}:{self.port}/{self.name}")
 
 
+class TokenSettings(BaseSettings):
+    """Настройки токенов"""
+    secret: str
+    algorithm: str
+
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+
 class IpInfoSettings(BaseSettings):
     """Настройки ipinfo"""
     ipinfo_url: str
@@ -40,13 +48,15 @@ class Settings(BaseSettings):
     """Настройки"""
     api_settings: ApiSettings
     database_settings: DatabaseSettings
+    token_settings: TokenSettings
     ipinfo_settings: IpInfoSettings
 
 
 @lru_cache()
 def init_settings() -> Settings:
     """Инициализация настроек"""
-    return Settings(api_settings=ApiSettings(), database_settings=DatabaseSettings(), ipinfo_settings=IpInfoSettings())
+    return Settings(api_settings=ApiSettings(), database_settings=DatabaseSettings(), token_settings=TokenSettings(),
+                    ipinfo_settings=IpInfoSettings())
 
 
 settings = init_settings()

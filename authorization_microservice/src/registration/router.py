@@ -5,7 +5,7 @@ from src.registration.schemas import CreateUserSchemas
 from src.registration.service import RegistrationService, init_registration_service
 from src.registration.utils import get_user_country
 
-registration_router = APIRouter(prefix="/authorization", tags=["register"])
+registration_router = APIRouter(prefix="/auth", tags=["register"])
 
 
 @registration_router.post("/register/")

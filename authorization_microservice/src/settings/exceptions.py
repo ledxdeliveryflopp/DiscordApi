@@ -34,3 +34,9 @@ class UserIpException(DetailedHTTPException):
     """Не удалось определить страну пользователя"""
     status_code = 400
     detail = "It is not possible to determine the country, turn off the VPN or try later."
+
+
+class BadPasswordException(DetailedHTTPException):
+    """Не верный пароль"""
+    status_code = 403
+    detail = "Bad password."

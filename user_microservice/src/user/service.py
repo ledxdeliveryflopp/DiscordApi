@@ -1,10 +1,9 @@
 from dataclasses import dataclass
 from typing import Any, Sequence
 
-from fastapi import HTTPException, Depends
+from fastapi import Depends
 from sqlalchemy import Row, RowMapping
 from sqlalchemy.ext.asyncio import AsyncSession
-from starlette.requests import Request
 
 from src.settings.database import get_session
 from src.settings.exceptions import UserDontExistException
