@@ -5,7 +5,7 @@ from src.settings.models import AbstractModel
 
 class UserModel(AbstractModel):
     """Модель пользователя"""
-    __tablename__ = "user"
+    __tablename__ = "users"
 
     username = Column(String(length=20), unique=False, nullable=False, comment="имя пользователя")
     email = Column(String(length=255), unique=False, nullable=False, comment="почта пользователя")

@@ -15,6 +15,7 @@ services:
     networks:
       - sql
 
+
   nginx:
     image: nginx
     container_name: nginx
@@ -49,6 +50,15 @@ services:
       - sql
       - nginx
 
+  api_gateway:
+    container_name: gateway
+    build:
+      ./api_gateway
+    ports:
+      - "9000:9000"
+    networks:
+      - sql
+      - nginx
 
 volumes:
   database:

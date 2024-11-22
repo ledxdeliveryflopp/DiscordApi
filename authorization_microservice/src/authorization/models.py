@@ -5,7 +5,7 @@ from src.settings.models import AbstractModel
 
 class TokenModel(AbstractModel):
     """Модель токенов"""
-    __tablename__ = "token"
+    __tablename__ = "tokens"
 
     token = Column(String, nullable=False, comment="Токен")
     expire = Column(DateTime, nullable=False, comment="Срок действия")
