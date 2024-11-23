@@ -8,6 +8,6 @@ import (
 func InitGatewayRouter(router *mux.Router) {
 	// Инициализация роутера api gateway
 	tokenRouter := router.PathPrefix("/gateway").Subrouter()
-	tokenRouter.HandleFunc("/get-token/", getInfoAboutToken).Methods("Get")
+	tokenRouter.HandleFunc("/get-token/", GetTokenInfo).Methods("Get")
 	fmt.Println("Token router inited")
 }
