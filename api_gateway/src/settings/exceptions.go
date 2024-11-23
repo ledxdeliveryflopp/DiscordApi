@@ -21,4 +21,17 @@ func BadToken(writer http.ResponseWriter, request *http.Request) {
 func UnknownError(writer http.ResponseWriter, request *http.Request) {
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(http.StatusForbidden)
+	message := Error{
+		Detail: "Unknow error.",
+	}
+	json.NewEncoder(writer).Encode(message)
+}
+
+func DeleteError(writer http.ResponseWriter, request *http.Request) {
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusForbidden)
+	message := Error{
+		Detail: "Deletion error.",
+	}
+	json.NewEncoder(writer).Encode(message)
 }
