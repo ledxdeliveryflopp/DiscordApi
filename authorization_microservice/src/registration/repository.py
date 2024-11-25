@@ -16,7 +16,7 @@ class RegistrationRepository(BaseService):
 
     async def _repository_find_user_by_email(self, email: str) -> Result | CursorResult:
         """Поиск пользователя по email"""
-        user = await self.session.execute(Select(UserModel).where(UserModel.email == email))
+        user = await self.user_session.execute(Select(UserModel).where(UserModel.email == email))
         return user.scalar()
 
     async def _repository_create_user(self, schemas: CreateUserSchemas, request: Request) -> dict | HTTPException:
@@ -27,5 +27,5 @@ class RegistrationRepository(BaseService):
         user_country = await get_user_country(request)
         new_user = UserModel(**schemas.dict(exclude={"password", "country"}), password=hash_password(schemas.password),
                              country=user_country)
-        await self.save_object(new_user)
+        await self.save_user_object(new_user)
         return {"detail": "success"}
