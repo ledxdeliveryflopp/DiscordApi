@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.authorization.repository import AuthorizationRepository
 from src.authorization.schemas import LoginSchemas
-from src.settings.database import get_session
+from src.settings.database import get_session, get_user_session
 
 
 @dataclass
@@ -17,7 +17,8 @@ class AuthorizationService(AuthorizationRepository):
         return await self._repository_login(schemas)
 
 
-async def init_authorization_service(session: AsyncSession = Depends(get_session)) -> AuthorizationService:
+async def init_authorization_service(session: AsyncSession = Depends(get_session),
+                                     user_session: AsyncSession = Depends(get_user_session)) -> AuthorizationService:
     """Инициализация сервиса авторизации"""
-    return AuthorizationService(session)
+    return AuthorizationService(session, user_session)
 

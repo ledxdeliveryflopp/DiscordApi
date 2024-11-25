@@ -2,19 +2,44 @@ name: discordapi
 
 services:
 
-  database:
-    container_name: database
+  user_database:
+    container_name: user_database
     image: postgres
     restart: on-failure
-    env_file:
-      - .env
+    environment:
+      POSTGRES_DB: user
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
     volumes:
       - database:/data/
     ports:
-      - "${POSTGRES_PORT}:${POSTGRES_PORT}"
+      - "5443:5432"
     networks:
       - sql
 
+  token_database:
+    container_name: token_database
+    image: postgres
+    restart: on-failure
+    environment:
+      POSTGRES_DB: token
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "5444:5432"
+    networks:
+      - sql
+
+  pgadmin:
+    container_name: pgadmin4
+    image: dpage/pgadmin4
+    restart: on-failure
+    env_file:
+      - .env
+    ports:
+      - "5543:5543"
+    networks:
+      - sql
 
   nginx:
     image: nginx
@@ -27,6 +52,24 @@ services:
       - .env
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - nginx
+
+  nginx-ui:
+    image: 'uozi/nginx-ui:latest'
+    stdin_open: true
+    tty: true
+    container_name: nginx-ui
+    restart: always
+    environment:
+      - TZ=Asia/Novosibirsk
+    volumes:
+      - '/mnt/user/appdata/nginx:/etc/nginx'
+      - '/mnt/user/appdata/nginx-ui:/etc/nginx-ui'
+      - '/var/www:/var/www'
+    ports:
+      - 8080:80
+      - 8443:443
     networks:
       - nginx
 

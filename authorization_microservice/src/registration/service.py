@@ -6,7 +6,7 @@ from starlette.requests import Request
 
 from src.registration.repository import RegistrationRepository
 from src.registration.schemas import CreateUserSchemas
-from src.settings.database import get_session
+from src.settings.database import get_session, get_user_session
 
 
 @dataclass
@@ -18,7 +18,8 @@ class RegistrationService(RegistrationRepository):
         return await self._repository_create_user(schemas, request)
 
 
-async def init_registration_service(session: AsyncSession = Depends(get_session)) -> RegistrationService:
+async def init_registration_service(session: AsyncSession = Depends(get_session),
+                                    user_session: AsyncSession = Depends(get_user_session)) -> RegistrationService:
     """Инициализация сервиса регистрации"""
-    return RegistrationService(session)
+    return RegistrationService(session, user_session)
 

@@ -16,7 +16,7 @@ class AuthorizationRepository(BaseService):
 
     async def _find_user_by_email(self, email: str) -> UserModel:
         """Поиск пользователя по email"""
-        user = await self.session.execute(Select(UserModel).where(UserModel.email == email))
+        user = await self.user_session.execute(Select(UserModel).where(UserModel.email == email))
         return user.scalar()
 
     async def _repository_login(self, schemas: LoginSchemas) -> dict:

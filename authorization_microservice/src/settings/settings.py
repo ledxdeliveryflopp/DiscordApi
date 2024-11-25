@@ -28,6 +28,23 @@ class DatabaseSettings(BaseSettings):
                 f"{self.host}:{self.port}/{self.name}")
 
 
+class UserDatabaseSettings(BaseSettings):
+
+    user_db_user: str
+    user_db_password: str
+    user_db_host: str
+    user_db_port: str
+    user_db_name: str
+
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    @property
+    def get_full_db_path(self) -> str:
+        """Создание полного url для бд"""
+        return (f"postgresql+asyncpg://{self.user_db_user}:{self.user_db_password}@"
+                f"{self.user_db_host}:{self.user_db_port}/{self.user_db_name}")
+
+
 class TokenSettings(BaseSettings):
     """Настройки токенов"""
     secret: str
@@ -48,6 +65,7 @@ class Settings(BaseSettings):
     """Настройки"""
     api_settings: ApiSettings
     database_settings: DatabaseSettings
+    user_database_settings: UserDatabaseSettings
     token_settings: TokenSettings
     ipinfo_settings: IpInfoSettings
 
@@ -55,7 +73,8 @@ class Settings(BaseSettings):
 @lru_cache()
 def init_settings() -> Settings:
     """Инициализация настроек"""
-    return Settings(api_settings=ApiSettings(), database_settings=DatabaseSettings(), token_settings=TokenSettings(),
+    return Settings(api_settings=ApiSettings(), database_settings=DatabaseSettings(),
+                    user_database_settings=UserDatabaseSettings(), token_settings=TokenSettings(),
                     ipinfo_settings=IpInfoSettings())
 
 
