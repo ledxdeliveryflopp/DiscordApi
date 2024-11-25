@@ -9,11 +9,11 @@ import (
 	"net/http"
 )
 
-//go:embed env/*
+//go:embed environment/*
 var env embed.FS
 
 func main() {
-	//Запуск приложения
+	// Запуск приложения
 	apiGatewayRouter := mux.NewRouter()
 	gateway.InitGatewayRouter(apiGatewayRouter)
 	EnvInit := settings.InitSettings(env)
