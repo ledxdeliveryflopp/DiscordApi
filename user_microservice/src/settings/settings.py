@@ -28,16 +28,35 @@ class DatabaseSettings(BaseSettings):
                 f"{self.host}:{self.port}/{self.name}")
 
 
+class S3Settings(BaseSettings):
+    """Настройки S3"""
+    secret_access_key: str
+    secret_key_id: str
+
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+
+class TokenSettings(BaseSettings):
+    """Настройки токенов"""
+    jwt_secret: str
+    algorithm: str
+
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+
 class Settings(BaseSettings):
     """Настройки"""
     api_settings: ApiSettings
     database_settings: DatabaseSettings
+    s3_settings: S3Settings
+    token_settings: TokenSettings
 
 
 @lru_cache()
 def init_settings() -> Settings:
     """Инициализация настроек"""
-    return Settings(api_settings=ApiSettings(), database_settings=DatabaseSettings())
+    return Settings(api_settings=ApiSettings(), database_settings=DatabaseSettings(), s3_settings=S3Settings(),
+                    token_settings=TokenSettings())
 
 
 settings = init_settings()
