@@ -29,19 +29,19 @@ services:
       - "5444:5432"
     networks:
       - sql
-
-  chat_database:
-    container_name: chat_database
-    image: postgres
-    restart: on-failure
-    environment:
-      POSTGRES_DB: chat
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: admin
-    ports:
-      - "5445:5432"
-    networks:
-      - sql
+#
+#  chat_database:
+#    container_name: chat_database
+#    image: postgres
+#    restart: on-failure
+#    environment:
+#      POSTGRES_DB: chat
+#      POSTGRES_USER: postgres
+#      POSTGRES_PASSWORD: admin
+#    ports:
+#      - "5445:5432"
+#    networks:
+#      - sql
 
   pgadmin:
     container_name: pgadmin4
@@ -124,6 +124,7 @@ services:
       - "6000:6000"
     networks:
       - sql
+      - nginx
 
 volumes:
   database:
