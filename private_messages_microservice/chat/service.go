@@ -15,19 +15,16 @@ func GetChatInfo(writer http.ResponseWriter, request *http.Request) {
 	jsonEncoder := json.NewEncoder(writer)
 	writer.Header().Set("Content-Type", "application/json")
 	token := request.Header.Get("Authorization")
-	var errSchemas settings.Error
 	chatID, err := strconv.Atoi(mux.Vars(request)["chat_id"])
 	if err != nil {
 		log.Printf("Query chat error: %s", err)
-		errSchemas.Detail = "Bad chat param."
-		jsonEncoder.Encode(errSchemas)
+		settings.RaiseError(writer, "Bad chat id.", 400)
 		return
 	}
 	userId, err := GetTokenPayload(token)
 	if err != nil {
 		log.Printf("Bad jwt token: %s", err)
-		errSchemas.Detail = "Bad token."
-		jsonEncoder.Encode(errSchemas)
+		settings.RaiseError(writer, "Bad token.", 400)
 		return
 	}
 	chat := make(chan PrivateChat)
@@ -36,10 +33,11 @@ func GetChatInfo(writer http.ResponseWriter, request *http.Request) {
 	select {
 	case err = <-chatError:
 		log.Printf("Find chat error: %s", err)
-		errSchemas.Detail = fmt.Sprintf("Error: %s", err)
-		jsonEncoder.Encode(errSchemas)
+		errStr := fmt.Sprintf("Error: %s", err)
+		settings.RaiseError(writer, errStr, 400)
 		close(chatError)
 		close(chat)
+		return
 	case chatData := <-chat:
 		jsonEncoder.Encode(chatData)
 		close(chatError)
@@ -52,27 +50,24 @@ func AddMessageInChat(writer http.ResponseWriter, request *http.Request) {
 	jsonEncoder := json.NewEncoder(writer)
 	writer.Header().Set("Content-Type", "application/json")
 	token := request.Header.Get("Authorization")
-	var errSchemas settings.Error
+	var errSchemas settings.ErrorSchemas
 	chatID, err := strconv.Atoi(mux.Vars(request)["chat_id"])
 	if err != nil {
 		log.Printf("Query chat error: %s", err)
-		errSchemas.Detail = "Bad chat param."
-		jsonEncoder.Encode(errSchemas)
+		settings.RaiseError(writer, "Bad chat id.", 400)
 		return
 	}
 	userId, err := GetTokenPayload(token)
 	if err != nil {
 		log.Printf("Bad jwt token: %s", err)
-		errSchemas.Detail = "Bad token."
-		jsonEncoder.Encode(errSchemas)
+		settings.RaiseError(writer, "Bad token.", 400)
 		return
 	}
 	var messageSchemas MessageCreate
 	err = json.NewDecoder(request.Body).Decode(&messageSchemas)
 	if err != nil {
 		log.Printf("Request body decode err: %s", err)
-		errSchemas.Detail = "Read request body error."
-		jsonEncoder.Encode(errSchemas)
+		settings.RaiseError(writer, "Read request body error.", 400)
 		return
 	}
 	validate := validator.New()
@@ -89,8 +84,7 @@ func AddMessageInChat(writer http.ResponseWriter, request *http.Request) {
 	select {
 	case err = <-messageErr:
 		log.Printf("Add message error: %s", err)
-		errSchemas.Detail = "Add message error."
-		jsonEncoder.Encode(errSchemas)
+		settings.RaiseError(writer, "Add message error.", 400)
 		close(messageErr)
 		close(success)
 		return
@@ -109,44 +103,50 @@ func AddMessageInChat(writer http.ResponseWriter, request *http.Request) {
 func GetLastMessageFromChat(writer http.ResponseWriter, request *http.Request) {
 	jsonEncoder := json.NewEncoder(writer)
 	writer.Header().Set("Content-Type", "application/json")
-	var errSchemas settings.Error
 	chatID, chatIdErr := strconv.Atoi(mux.Vars(request)["chat_id"])
 	limit, limitErr := strconv.Atoi(request.URL.Query().Get("limit"))
 	offset, offsetErr := strconv.Atoi(request.URL.Query().Get("offset"))
+	token := request.Header.Get("Authorization")
+	userId, err := GetTokenPayload(token)
 	switch {
+	case err != nil:
+		log.Printf("Bad jwt token: %s", err)
+		settings.RaiseError(writer, "Bad token.", 400)
+		return
 	case chatIdErr != nil:
 		log.Printf("Query chat error: %s", chatIdErr)
-		errSchemas.Detail = "Bad chat param."
-		jsonEncoder.Encode(errSchemas)
+		settings.RaiseError(writer, "Bad chat param.", 400)
 		return
 	case limitErr != nil:
 		log.Printf("Query limit error: %s", limitErr)
-		errSchemas.Detail = "Bad limit param."
-		jsonEncoder.Encode(errSchemas)
+		settings.RaiseError(writer, "Bad limit param.", 400)
 		return
 	case offsetErr != nil:
 		log.Printf("Query offset error: %s", offsetErr)
-		errSchemas.Detail = "Bad offset param."
-		jsonEncoder.Encode(errSchemas)
+		settings.RaiseError(writer, "Bad offset param.", 400)
 		return
 	case offset > limit:
-		errSchemas.Detail = "offset cannot be greater than limit."
-		jsonEncoder.Encode(errSchemas)
+		settings.RaiseError(writer, "offset cannot be greater than limit.", 400)
+		return
+	case offset < 0 || offset == 1:
+		settings.RaiseError(writer, "offset cannot be less than 0 or equal to 1.", 400)
 		return
 	}
 	messages := make(chan []Message)
 	messagesErr := make(chan error)
-	go getLastMessageFromChatRepository(chatID, limit, offset, messages, messagesErr)
+	go getLastMessageFromChatRepository(chatID, userId, limit, offset, messages, messagesErr)
 	select {
 	case msg := <-messages:
 		jsonEncoder.Encode(msg)
 		close(messagesErr)
 		close(messages)
+		return
 	case err := <-messagesErr:
 		log.Printf("Find messages error: %s", err)
-		errSchemas.Detail = "Find messages error, maybe bad chat id."
-		jsonEncoder.Encode(errSchemas)
+		errorStr := fmt.Sprintf("Find messages error: %s", err)
+		settings.RaiseError(writer, errorStr, 400)
 		close(messagesErr)
 		close(messages)
+		return
 	}
 }
