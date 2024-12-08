@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	_ "github.com/lib/pq"
+	"log"
 )
 
 func getInfoAboutPrivateChat(chatID int, userID int, chat chan PrivateChat, chatError chan error) {
@@ -44,26 +45,63 @@ func addMessageInChatRepository(chatID int, userID int, message MessageCreate, s
 	success <- 0
 }
 
-func getLastMessageFromChatRepository(chatID int, limit int, offset int, messages chan []Message, messagesErr chan error) {
+func checkUserInChat(userID int, chatID int) (bool, error) {
 	db := settings.ConnectToBd()
-	queryStr := fmt.Sprintf("SELECT m.id, m.text, m.chat_id, u.id, u.username FROM message m JOIN users u ON (m.owner_id = u.id) WHERE m.chat_id = %d ORDER BY m.id DESC LIMIT %d OFFSET %d", chatID, limit, offset)
-	rows, err := db.Query(queryStr)
+	queryStr := fmt.Sprintf("SELECT * FROM private_chat WHERE id = %d", chatID)
+	row, err := db.Query(queryStr)
+	if err != nil {
+		return false, err
+	}
+	defer row.Close()
+	var checkPrivateChat CheckPrivateChat
+	for row.Next() {
+		err := row.Scan(&checkPrivateChat.ID, &checkPrivateChat.ChatStarter, &checkPrivateChat.ChatRecipient)
+		if err != nil {
+			return false, err
+		}
+	}
+	log.Println("chat starter", checkPrivateChat.ChatStarter)
+	log.Println("chat recipient ", checkPrivateChat.ChatRecipient)
+	log.Println("user id ", userID)
+	if checkPrivateChat.ChatStarter == userID || checkPrivateChat.ChatRecipient == userID {
+		return true, nil
+	} else {
+		return false, nil
+	}
+}
+
+func getLastMessageFromChatRepository(chatID int, userID int, limit int, offset int, messages chan []Message, messagesErr chan error) {
+	checkUser, err := checkUserInChat(userID, chatID)
 	if err != nil {
 		messagesErr <- err
 	}
-	defer rows.Close()
-	var messagesSchemas []Message
-	for rows.Next() {
-		var m Message
-		err := rows.Scan(&m.ID, &m.Text, &m.ChatId, &m.Owner.ID, &m.Owner.Username)
+	if checkUser == true {
+		db := settings.ConnectToBd()
+		queryStr := fmt.Sprintf("SELECT message.id, message.text, message.chat_id, users.id, users.username FROM message JOIN users ON (message.owner_id = users.id) WHERE message.chat_id = %d ORDER BY message.id DESC LIMIT %d OFFSET %d", chatID, limit, offset)
+		rows, err := db.Query(queryStr)
 		if err != nil {
 			messagesErr <- err
 		}
-		messagesSchemas = append(messagesSchemas, m)
-	}
-	if messagesSchemas != nil {
-		messages <- messagesSchemas
-	} else {
-		messagesErr <- errors.New("empty messages list, maybe bad chat id")
+		defer rows.Close()
+		var messagesSchemas []Message
+		for rows.Next() {
+			var m Message
+			err := rows.Scan(&m.ID, &m.Text, &m.ChatId, &m.Owner.ID, &m.Owner.Username)
+			log.Println("err rows", err)
+			if err != nil {
+				messagesErr <- err
+			}
+			log.Println("Message", m)
+			messagesSchemas = append(messagesSchemas, m)
+		}
+		log.Print(messagesSchemas)
+		if messagesSchemas != nil {
+			messages <- messagesSchemas
+		} else {
+			log.Println("Db rows", rows)
+			messagesErr <- errors.New("empty messages list, maybe bad chat id")
+		}
+	} else if checkUser == false {
+		messagesErr <- errors.New("current user is not in this chat")
 	}
 }
