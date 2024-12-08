@@ -4,6 +4,7 @@ package chat
 type Users struct {
 	ID       int    `json:"ID" db:"id"`
 	Username string `json:"Username" db:"username"`
+	//AvatarUrl string `json:"AvatarUrl" db:"avatar_url"`
 }
 
 // PrivateChat Структура личного чата
@@ -11,6 +12,13 @@ type PrivateChat struct {
 	ID            int   `json:"ID" db:"id"`
 	ChatStarter   Users `json:"ChatStarter"`
 	ChatRecipient Users `json:"ChatRecipient"`
+}
+
+// CheckPrivateChat Структура для проверки наличия юзера в чате
+type CheckPrivateChat struct {
+	ID            int
+	ChatStarter   int
+	ChatRecipient int
 }
 
 // Message Структура сообщения
