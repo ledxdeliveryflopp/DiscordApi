@@ -11,8 +11,8 @@ import (
 //go:embed environment/*
 var env embed.FS
 
-////go:embed migrations/*.sql
-//var dbMigrations embed.FS
+//go:embed migrations/*.sql
+var dbMigrations embed.FS
 
 //go:embed migrations/seeder/*.sql
 var fakeDbMigrations embed.FS
@@ -20,8 +20,8 @@ var fakeDbMigrations embed.FS
 // Установка роутеров и запуск сервера
 func startServer(port string) {
 	settings.InitSettings(env)
-	//settings.MigrateDatabase(dbMigrations)
-	settings.SeedFakeDataInDB(fakeDbMigrations)
+	settings.MigrateDatabase(dbMigrations)
+	//settings.SeedFakeDataInDB(fakeDbMigrations)
 	mainRouter := mux.NewRouter()
 	mainRouter.NotFoundHandler = http.HandlerFunc(settings.ErrorNotFoundHandler)
 	mainRouter.MethodNotAllowedHandler = http.HandlerFunc(settings.ErrorBadRequestHandler)
