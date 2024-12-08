@@ -13,6 +13,5 @@ FROM alpine:3.20.3
 WORKDIR /app
 
 COPY --from=builder api /app/api
-COPY --from=builder /build/.env /app/.env
 
 ENTRYPOINT ["/app/api"]

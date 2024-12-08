@@ -8,7 +8,7 @@ import (
 
 func InitSettings(envPath embed.FS) bool {
 	// инициализация env
-	err := godotenv.Load(envPath, "env/.env")
+	err := godotenv.Load(envPath, "environment/.env")
 	if err != nil {
 		fmt.Println("init settings error", err)
 		return false
