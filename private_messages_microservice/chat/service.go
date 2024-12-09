@@ -15,15 +15,15 @@ func GetChatInfo(writer http.ResponseWriter, request *http.Request) {
 	jsonEncoder := json.NewEncoder(writer)
 	writer.Header().Set("Content-Type", "application/json")
 	token := request.Header.Get("Authorization")
-	chatID, err := strconv.Atoi(mux.Vars(request)["chat_id"])
-	if err != nil {
-		log.Printf("Query chat error: %s", err)
+	chatID, chatIDErr := strconv.Atoi(mux.Vars(request)["chat_id"])
+	userId, tokenErr := GetTokenPayload(token)
+	switch {
+	case chatIDErr != nil:
+		log.Printf("Query chat error: %s", chatIDErr)
 		settings.RaiseError(writer, "Bad chat id.", 400)
 		return
-	}
-	userId, err := GetTokenPayload(token)
-	if err != nil {
-		log.Printf("Bad jwt token: %s", err)
+	case tokenErr != nil:
+		log.Printf("Bad jwt token: %s", tokenErr)
 		settings.RaiseError(writer, "Bad token.", 400)
 		return
 	}
@@ -31,7 +31,7 @@ func GetChatInfo(writer http.ResponseWriter, request *http.Request) {
 	chatError := make(chan error)
 	go getInfoAboutPrivateChat(chatID, userId, chat, chatError)
 	select {
-	case err = <-chatError:
+	case err := <-chatError:
 		log.Printf("Find chat error: %s", err)
 		errStr := fmt.Sprintf("Error: %s", err)
 		settings.RaiseError(writer, errStr, 400)
@@ -51,29 +51,29 @@ func AddMessageInChat(writer http.ResponseWriter, request *http.Request) {
 	writer.Header().Set("Content-Type", "application/json")
 	token := request.Header.Get("Authorization")
 	var errSchemas settings.ErrorSchemas
-	chatID, err := strconv.Atoi(mux.Vars(request)["chat_id"])
-	if err != nil {
-		log.Printf("Query chat error: %s", err)
+	chatID, chatIDErr := strconv.Atoi(mux.Vars(request)["chat_id"])
+	userId, tokenErr := GetTokenPayload(token)
+	switch {
+	case chatIDErr != nil:
+		log.Printf("Query chat error: %s", chatIDErr)
 		settings.RaiseError(writer, "Bad chat id.", 400)
 		return
-	}
-	userId, err := GetTokenPayload(token)
-	if err != nil {
-		log.Printf("Bad jwt token: %s", err)
+	case tokenErr != nil:
+		log.Printf("Bad jwt token: %s", tokenErr)
 		settings.RaiseError(writer, "Bad token.", 400)
 		return
 	}
 	var messageSchemas MessageCreate
-	err = json.NewDecoder(request.Body).Decode(&messageSchemas)
-	if err != nil {
-		log.Printf("Request body decode err: %s", err)
+	decodeErr := json.NewDecoder(request.Body).Decode(&messageSchemas)
+	validate := validator.New()
+	validationErr := validate.Struct(messageSchemas)
+	switch {
+	case decodeErr != nil:
+		log.Printf("Request body decode err: %s", decodeErr)
 		settings.RaiseError(writer, "Read request body error.", 400)
 		return
-	}
-	validate := validator.New()
-	err = validate.Struct(messageSchemas)
-	if err != nil {
-		errors := fmt.Sprintf("Validation error: %s", err.(validator.ValidationErrors))
+	case validationErr != nil:
+		errors := fmt.Sprintf("Validation error: %s", validationErr.(validator.ValidationErrors))
 		errSchemas.Detail = errors
 		jsonEncoder.Encode(errSchemas)
 		return
@@ -82,7 +82,7 @@ func AddMessageInChat(writer http.ResponseWriter, request *http.Request) {
 	success := make(chan int)
 	go addMessageInChatRepository(chatID, userId, messageSchemas, success, messageErr)
 	select {
-	case err = <-messageErr:
+	case err := <-messageErr:
 		log.Printf("Add message error: %s", err)
 		settings.RaiseError(writer, "Add message error.", 400)
 		close(messageErr)
@@ -149,4 +149,49 @@ func GetLastMessageFromChat(writer http.ResponseWriter, request *http.Request) {
 		close(messages)
 		return
 	}
+}
+
+func StartPrivateChat(writer http.ResponseWriter, request *http.Request) {
+	encoder := json.NewEncoder(writer)
+	writer.Header().Set("Content-Type", "application/json")
+	token := request.Header.Get("Authorization")
+	userId, err := GetTokenPayload(token)
+	if err != nil {
+		settings.RaiseError(writer, "bad token", 400)
+		return
+	}
+	var chatCreateSchemas PrivateChatCreate
+	decodeErr := json.NewDecoder(request.Body).Decode(&chatCreateSchemas)
+	validate := validator.New()
+	validationErr := validate.Struct(chatCreateSchemas)
+	switch {
+	case decodeErr != nil:
+		errors := fmt.Sprintf("Decode error: %s", err)
+		settings.RaiseError(writer, errors, 400)
+		return
+	case validationErr != nil:
+		errors := fmt.Sprintf("Validation error: %s", err)
+		settings.RaiseError(writer, errors, 400)
+		return
+	case chatCreateSchemas.RecipientID == userId:
+		settings.RaiseError(writer, "current user cannot by recipient", 400)
+		return
+	}
+	chatError := make(chan error)
+	newChatID := make(chan int)
+	go startPrivateChatRepository(userId, chatCreateSchemas, newChatID, chatError)
+	select {
+	case chatID := <-newChatID:
+		var message struct {
+			Detail string `json:"Detail"`
+		}
+		message.Detail = fmt.Sprintf("Chat id: %d", chatID)
+		encoder.Encode(message)
+		return
+	case err := <-chatError:
+		chatErr := fmt.Sprintf("Chat add error: %s", err)
+		settings.RaiseError(writer, chatErr, 400)
+		return
+	}
+
 }
