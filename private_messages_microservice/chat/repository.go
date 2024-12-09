@@ -6,6 +6,7 @@ import (
 	"fmt"
 	_ "github.com/lib/pq"
 	"log"
+	"reflect"
 )
 
 func getInfoAboutPrivateChat(chatID int, userID int, chat chan PrivateChat, chatError chan error) {
@@ -103,5 +104,52 @@ func getLastMessageFromChatRepository(chatID int, userID int, limit int, offset 
 		}
 	} else if checkUser == false {
 		messagesErr <- errors.New("current user is not in this chat")
+	}
+}
+
+func startPrivateChatRepository(userID int, chatInfo PrivateChatCreate, newChatID chan int, chatError chan error) {
+	db := settings.ConnectToBd()
+	queryStr := fmt.Sprintf("SELECT * FROM private_chat WHERE chat_starter_id = %d AND chat_recipient_id = %d OR chat_recipient_id = %d AND chat_starter_id = %d", userID, chatInfo.RecipientID, userID, chatInfo.RecipientID)
+	row, err := db.Query(queryStr)
+	if err != nil {
+		chatError <- err
+	}
+	var checkChat CheckPrivateChat
+	for row.Next() {
+		err = row.Scan(&checkChat.ID, &checkChat.ChatStarter, &checkChat.ChatRecipient)
+		if err != nil {
+			chatError <- err
+		}
+	}
+	switch {
+	case chatInfo.Text != "" && reflect.ValueOf(checkChat).IsZero() == true:
+		queryStr = fmt.Sprintf("INSERT INTO private_chat (chat_starter_id, chat_recipient_id) VALUES (%d, %d) RETURNING id", userID, chatInfo.RecipientID)
+		row, err = db.Query(queryStr)
+		if err != nil {
+			chatError <- err
+		}
+		var chatID int
+		for row.Next() {
+			row.Scan(&chatID)
+		}
+		queryStr = fmt.Sprintf("INSERT INTO message (text, owner_id, chat_id) VALUES ('%s', %d, %d)", chatInfo.Text, userID, chatID)
+		_, err = db.Query(queryStr)
+		if err != nil {
+			chatError <- err
+		}
+		newChatID <- chatID
+	case chatInfo.Text == "" && reflect.ValueOf(checkChat).IsZero() == true:
+		queryStr = fmt.Sprintf("INSERT INTO private_chat (chat_starter_id, chat_recipient_id) VALUES (%d, %d) RETURNING id", userID, chatInfo.RecipientID)
+		_, err = db.Query(queryStr)
+		if err != nil {
+			chatError <- err
+		}
+		var chatID int
+		for row.Next() {
+			row.Scan(&chatID)
+		}
+		newChatID <- chatID
+	case reflect.ValueOf(checkChat).IsZero() == false:
+		chatError <- errors.New("current user already have chat with this recipient")
 	}
 }
