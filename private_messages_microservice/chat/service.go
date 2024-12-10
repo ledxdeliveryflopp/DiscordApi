@@ -32,8 +32,7 @@ func GetChatInfo(writer http.ResponseWriter, request *http.Request) {
 	go getInfoAboutPrivateChat(chatID, userId, chat, chatError)
 	select {
 	case err := <-chatError:
-		log.Printf("Find chat error: %s", err)
-		errStr := fmt.Sprintf("Error: %s", err)
+		errStr := fmt.Sprintf("%s", err)
 		settings.RaiseError(writer, errStr, 400)
 		close(chatError)
 		close(chat)
@@ -80,11 +79,11 @@ func AddMessageInChat(writer http.ResponseWriter, request *http.Request) {
 	}
 	messageErr := make(chan error)
 	success := make(chan int)
-	go addMessageInChatRepository(chatID, userId, messageSchemas, success, messageErr)
+	go addMessageInChatRepository(request.Context(), chatID, userId, messageSchemas, success, messageErr)
 	select {
 	case err := <-messageErr:
-		log.Printf("Add message error: %s", err)
-		settings.RaiseError(writer, "Add message error.", 400)
+		errorStr := fmt.Sprintf("%s", err)
+		settings.RaiseError(writer, errorStr, 400)
 		close(messageErr)
 		close(success)
 		return
@@ -142,8 +141,7 @@ func GetLastMessageFromChat(writer http.ResponseWriter, request *http.Request) {
 		close(messages)
 		return
 	case err := <-messagesErr:
-		log.Printf("Find messages error: %s", err)
-		errorStr := fmt.Sprintf("Find messages error: %s", err)
+		errorStr := fmt.Sprintf("%s", err)
 		settings.RaiseError(writer, errorStr, 400)
 		close(messagesErr)
 		close(messages)
@@ -179,17 +177,17 @@ func StartPrivateChat(writer http.ResponseWriter, request *http.Request) {
 	}
 	chatError := make(chan error)
 	newChatID := make(chan int)
-	go startPrivateChatRepository(userId, chatCreateSchemas, newChatID, chatError)
+	go startPrivateChatRepository(request.Context(), userId, chatCreateSchemas, newChatID, chatError)
 	select {
 	case chatID := <-newChatID:
 		var message struct {
-			Detail string `json:"Detail"`
+			ChatId string `json:"chat_id"`
 		}
-		message.Detail = fmt.Sprintf("Chat id: %d", chatID)
+		message.ChatId = fmt.Sprintf("%d", chatID)
 		encoder.Encode(message)
 		return
 	case err := <-chatError:
-		chatErr := fmt.Sprintf("Chat add error: %s", err)
+		chatErr := fmt.Sprintf("%s", err)
 		settings.RaiseError(writer, chatErr, 400)
 		return
 	}
