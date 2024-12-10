@@ -2,6 +2,8 @@ package chat
 
 import (
 	"chat_microservice/settings"
+	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	_ "github.com/lib/pq"
@@ -36,120 +38,123 @@ func getInfoAboutPrivateChat(chatID int, userID int, chat chan PrivateChat, chat
 	}
 }
 
-func addMessageInChatRepository(chatID int, userID int, message MessageCreate, success chan int, messageErr chan error) {
-	db := settings.ConnectToBd()
-	queryStr := fmt.Sprintf("INSERT INTO message (text, owner_id, chat_id) VALUES ('%s', %d, %d)", message.Text, userID, chatID)
-	_, err := db.Query(queryStr)
-	if err != nil {
-		messageErr <- err
-	}
-	success <- 0
-}
-
-func checkUserInChat(userID int, chatID int) (bool, error) {
+func checkUserInChat(userID int, chatID int, checkUserSuccess chan int, checkUserError chan error) {
 	db := settings.ConnectToBd()
 	queryStr := fmt.Sprintf("SELECT * FROM private_chat WHERE id = %d", chatID)
-	row, err := db.Query(queryStr)
-	if err != nil {
-		return false, err
-	}
-	defer row.Close()
+	row := db.QueryRow(queryStr)
 	var checkPrivateChat CheckPrivateChat
-	for row.Next() {
-		err := row.Scan(&checkPrivateChat.ID, &checkPrivateChat.ChatStarter, &checkPrivateChat.ChatRecipient)
-		if err != nil {
-			return false, err
-		}
+	err := row.Scan(&checkPrivateChat.ID, &checkPrivateChat.ChatStarter, &checkPrivateChat.ChatRecipient)
+	switch {
+	case err == sql.ErrNoRows:
+		checkUserError <- errors.New("chat not found")
+	case checkPrivateChat.ChatStarter == userID || checkPrivateChat.ChatRecipient == userID:
+		checkUserSuccess <- 0
+	default:
+		checkUserError <- errors.New("current user is not in this chat")
 	}
-	log.Println("chat starter", checkPrivateChat.ChatStarter)
-	log.Println("chat recipient ", checkPrivateChat.ChatRecipient)
-	log.Println("user id ", userID)
-	if checkPrivateChat.ChatStarter == userID || checkPrivateChat.ChatRecipient == userID {
-		return true, nil
-	} else {
-		return false, nil
+}
+
+func addMessageInChatRepository(ctx context.Context, chatID int, userID int, message MessageCreate, success chan int, messageErr chan error) {
+	checkUserSuccess := make(chan int)
+	checkUserError := make(chan error)
+	go checkUserInChat(userID, chatID, checkUserSuccess, checkUserError)
+	select {
+	case <-checkUserSuccess:
+		db := settings.ConnectToBd()
+		tx, err := db.BeginTx(ctx, nil)
+		if err != nil {
+			log.Printf("Begin tx error in add message: %s", err)
+			messageErr <- err
+		}
+		defer tx.Rollback()
+		queryStr := fmt.Sprintf("INSERT INTO message (text, owner_id, chat_id) VALUES ('%s', %d, %d)", message.Text, userID, chatID)
+		_, err = db.ExecContext(ctx, queryStr)
+		if err != nil {
+			log.Printf("Add message exec error: %s", err)
+			messageErr <- err
+		}
+		success <- 0
+	case err := <-checkUserError:
+		messageErr <- err
 	}
 }
 
 func getLastMessageFromChatRepository(chatID int, userID int, limit int, offset int, messages chan []Message, messagesErr chan error) {
-	checkUser, err := checkUserInChat(userID, chatID)
-	if err != nil {
-		messagesErr <- err
-	}
-	if checkUser == true {
+	checkUserSuccess := make(chan int)
+	checkUserError := make(chan error)
+	go checkUserInChat(userID, chatID, checkUserSuccess, checkUserError)
+	select {
+	case <-checkUserSuccess:
 		db := settings.ConnectToBd()
 		queryStr := fmt.Sprintf("SELECT message.id, message.text, message.chat_id, users.id, users.username FROM message JOIN users ON (message.owner_id = users.id) WHERE message.chat_id = %d ORDER BY message.id DESC LIMIT %d OFFSET %d", chatID, limit, offset)
 		rows, err := db.Query(queryStr)
 		if err != nil {
+			log.Printf("query messages error: %s", err)
 			messagesErr <- err
 		}
 		defer rows.Close()
 		var messagesSchemas []Message
 		for rows.Next() {
 			var m Message
-			err := rows.Scan(&m.ID, &m.Text, &m.ChatId, &m.Owner.ID, &m.Owner.Username)
-			log.Println("err rows", err)
-			if err != nil {
-				messagesErr <- err
-			}
-			log.Println("Message", m)
+			rows.Scan(&m.ID, &m.Text, &m.ChatId, &m.Owner.ID, &m.Owner.Username)
 			messagesSchemas = append(messagesSchemas, m)
 		}
-		log.Print(messagesSchemas)
 		if messagesSchemas != nil {
 			messages <- messagesSchemas
 		} else {
-			log.Println("Db rows", rows)
-			messagesErr <- errors.New("empty messages list, maybe bad chat id")
+			messagesErr <- errors.New("messages not found")
 		}
-	} else if checkUser == false {
-		messagesErr <- errors.New("current user is not in this chat")
+	case err := <-checkUserError:
+		messagesErr <- err
 	}
 }
 
-func startPrivateChatRepository(userID int, chatInfo PrivateChatCreate, newChatID chan int, chatError chan error) {
+func startPrivateChatRepository(ctx context.Context, userID int, chatInfo PrivateChatCreate, newChatID chan int, chatError chan error) {
 	db := settings.ConnectToBd()
-	queryStr := fmt.Sprintf("SELECT * FROM private_chat WHERE chat_starter_id = %d AND chat_recipient_id = %d OR chat_recipient_id = %d AND chat_starter_id = %d", userID, chatInfo.RecipientID, userID, chatInfo.RecipientID)
-	row, err := db.Query(queryStr)
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		chatError <- err
+		log.Printf("Begin tx error in start private chat: %s", err)
+		chatError <- errors.New("start chat error")
 	}
+	defer tx.Rollback()
+	queryStr := fmt.Sprintf("SELECT * FROM private_chat WHERE chat_starter_id = %d AND chat_recipient_id = %d OR chat_recipient_id = %d AND chat_starter_id = %d", userID, chatInfo.RecipientID, userID, chatInfo.RecipientID)
+	chatRow := tx.QueryRowContext(ctx, queryStr)
 	var checkChat CheckPrivateChat
-	for row.Next() {
-		err = row.Scan(&checkChat.ID, &checkChat.ChatStarter, &checkChat.ChatRecipient)
-		if err != nil {
-			chatError <- err
-		}
-	}
+	chatRow.Scan(&checkChat.ID, &checkChat.ChatStarter, &checkChat.ChatRecipient)
 	switch {
 	case chatInfo.Text != "" && reflect.ValueOf(checkChat).IsZero() == true:
 		queryStr = fmt.Sprintf("INSERT INTO private_chat (chat_starter_id, chat_recipient_id) VALUES (%d, %d) RETURNING id", userID, chatInfo.RecipientID)
-		row, err = db.Query(queryStr)
+		row := tx.QueryRowContext(ctx, queryStr)
+		var chatID int
+		err := row.Scan(&chatID)
 		if err != nil {
 			chatError <- err
 		}
-		var chatID int
-		for row.Next() {
-			row.Scan(&chatID)
-		}
 		queryStr = fmt.Sprintf("INSERT INTO message (text, owner_id, chat_id) VALUES ('%s', %d, %d)", chatInfo.Text, userID, chatID)
-		_, err = db.Query(queryStr)
+		_, err = tx.ExecContext(ctx, queryStr)
+		if err != nil {
+			log.Println("err", err)
+			chatError <- err
+		}
+		err = tx.Commit()
 		if err != nil {
 			chatError <- err
 		}
 		newChatID <- chatID
 	case chatInfo.Text == "" && reflect.ValueOf(checkChat).IsZero() == true:
 		queryStr = fmt.Sprintf("INSERT INTO private_chat (chat_starter_id, chat_recipient_id) VALUES (%d, %d) RETURNING id", userID, chatInfo.RecipientID)
-		_, err = db.Query(queryStr)
+		row := tx.QueryRowContext(ctx, queryStr)
+		var chatID int
+		err := row.Scan(&chatID)
 		if err != nil {
 			chatError <- err
 		}
-		var chatID int
-		for row.Next() {
-			row.Scan(&chatID)
+		err = tx.Commit()
+		if err != nil {
+			chatError <- err
 		}
 		newChatID <- chatID
-	case reflect.ValueOf(checkChat).IsZero() == false:
+	default:
 		chatError <- errors.New("current user already have chat with this recipient")
 	}
 }
