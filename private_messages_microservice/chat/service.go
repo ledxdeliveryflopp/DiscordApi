@@ -11,6 +11,34 @@ import (
 	"strconv"
 )
 
+func GetUserChatList(writer http.ResponseWriter, request *http.Request) {
+	jsonEncoder := json.NewEncoder(writer)
+	writer.Header().Set("Content-Type", "application/json")
+	token := request.Header.Get("Authorization")
+	userId, tokenErr := GetTokenPayload(token)
+	if tokenErr != nil {
+		log.Printf("Bad jwt token: %s", tokenErr)
+		settings.RaiseError(writer, "Bad token.", 400)
+		return
+	}
+	chatList := make(chan []UserChatList)
+	chatListError := make(chan error)
+	go GetCurrentUserChat(userId, chatList, chatListError)
+	select {
+	case list := <-chatList:
+		jsonEncoder.Encode(list)
+		close(chatList)
+		close(chatListError)
+		return
+	case err := <-chatListError:
+		errorStr := fmt.Sprintf("%s", err)
+		settings.RaiseError(writer, errorStr, 400)
+		close(chatList)
+		close(chatListError)
+		return
+	}
+}
+
 func GetChatInfo(writer http.ResponseWriter, request *http.Request) {
 	jsonEncoder := json.NewEncoder(writer)
 	writer.Header().Set("Content-Type", "application/json")
@@ -79,7 +107,7 @@ func AddMessageInChat(writer http.ResponseWriter, request *http.Request) {
 	}
 	messageErr := make(chan error)
 	success := make(chan int)
-	go addMessageInChatRepository(request.Context(), chatID, userId, messageSchemas, success, messageErr)
+	go addMessageInChatRepository(chatID, userId, messageSchemas, success, messageErr)
 	select {
 	case err := <-messageErr:
 		errorStr := fmt.Sprintf("%s", err)
@@ -177,7 +205,7 @@ func StartPrivateChat(writer http.ResponseWriter, request *http.Request) {
 	}
 	chatError := make(chan error)
 	newChatID := make(chan int)
-	go startPrivateChatRepository(request.Context(), userId, chatCreateSchemas, newChatID, chatError)
+	go startPrivateChatRepository(userId, chatCreateSchemas, newChatID, chatError)
 	select {
 	case chatID := <-newChatID:
 		var message struct {
@@ -185,10 +213,14 @@ func StartPrivateChat(writer http.ResponseWriter, request *http.Request) {
 		}
 		message.ChatId = fmt.Sprintf("%d", chatID)
 		encoder.Encode(message)
+		close(newChatID)
+		close(chatError)
 		return
 	case err := <-chatError:
 		chatErr := fmt.Sprintf("%s", err)
 		settings.RaiseError(writer, chatErr, 400)
+		close(newChatID)
+		close(chatError)
 		return
 	}
 
