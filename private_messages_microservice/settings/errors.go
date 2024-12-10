@@ -6,7 +6,7 @@ import (
 )
 
 type ErrorSchemas struct {
-	Detail string `json:"Detail"`
+	Detail string `json:"detail"`
 }
 
 func RaiseError(writer http.ResponseWriter, errorDetail string, code int) {

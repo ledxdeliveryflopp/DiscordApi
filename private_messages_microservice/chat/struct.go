@@ -2,16 +2,16 @@ package chat
 
 // Users Структура пользователя
 type Users struct {
-	ID        int    `json:"ID" db:"id"`
-	Username  string `json:"Username" db:"username"`
-	AvatarUrl string `json:"AvatarUrl" db:"avatar_url"`
+	ID        int    `json:"id"`
+	Username  string `json:"username"`
+	AvatarUrl string `json:"avatar_url"`
 }
 
 // PrivateChat Структура личного чата
 type PrivateChat struct {
-	ID            int   `json:"ID" db:"id"`
-	ChatStarter   Users `json:"ChatStarter"`
-	ChatRecipient Users `json:"ChatRecipient"`
+	ID            int   `json:"id" db:"id"`
+	ChatStarter   Users `json:"chat_starter"`
+	ChatRecipient Users `json:"chat_recipient"`
 }
 
 // CheckPrivateChat Структура для проверки наличия юзера в чате
@@ -23,14 +23,21 @@ type CheckPrivateChat struct {
 
 // Message Структура сообщения
 type Message struct {
-	ID     int    `json:"ID" db:"id"`
-	Text   string `json:"Text" validate:"required" db:"text"`
-	ChatId int    `json:"chat_id" validate:"required" db:"chat_id"`
-	Owner  Users  `json:"User"`
+	ID     int    `json:"id" db:"id"`
+	Text   string `json:"text"`
+	Answer int    `json:"message_answer_id"`
+	ChatId int    `json:"chat_id"`
+	Owner  Users  `json:"message_owner"`
+}
+
+// UserChatList структура списка чатов пользователя
+type UserChatList struct {
+	ID int `json:"id" db:"id"`
 }
 
 type MessageCreate struct {
-	Text string `json:"Text" validate:"required,gte=0,lte=2000" db:"text"`
+	Text   string `json:"text" validate:"required,gte=0,lte=2000" db:"text"`
+	Answer int    `json:"message_answer_id"`
 }
 
 type PrivateChatCreate struct {
