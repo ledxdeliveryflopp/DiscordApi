@@ -13,4 +13,4 @@ class UserModel(AbstractModel):
     description = Column(String(length=190), unique=False, nullable=True, comment="описание пользователя")
     status = Column(String(length=30), unique=False, nullable=True, comment="статус пользователя")
     country = Column(String(255), unique=False, nullable=False, comment="страна пользователя")
-    password = Column(String(255), unique=False, nullable=False, comment="пароль пользователя")
+    password = Column(String(255), unique=False, nullable=True, comment="пароль пользователя")
