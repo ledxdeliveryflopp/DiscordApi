@@ -61,6 +61,13 @@ class IpInfoSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
+class YandexIdSettings(BaseSettings):
+    """Настройки yandex id (для yandex oauth)"""
+    client_id: str
+
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+
 class Settings(BaseSettings):
     """Настройки"""
     api_settings: ApiSettings
@@ -68,6 +75,7 @@ class Settings(BaseSettings):
     user_database_settings: UserDatabaseSettings
     token_settings: TokenSettings
     ipinfo_settings: IpInfoSettings
+    yandex_id_settings: YandexIdSettings
 
 
 @lru_cache()
@@ -75,7 +83,7 @@ def init_settings() -> Settings:
     """Инициализация настроек"""
     return Settings(api_settings=ApiSettings(), database_settings=DatabaseSettings(),
                     user_database_settings=UserDatabaseSettings(), token_settings=TokenSettings(),
-                    ipinfo_settings=IpInfoSettings())
+                    ipinfo_settings=IpInfoSettings(), yandex_id_settings=YandexIdSettings())
 
 
 settings = init_settings()
