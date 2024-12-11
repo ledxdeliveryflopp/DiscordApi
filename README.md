@@ -1,6 +1,13 @@
 # Discord api
 API которое частично эмулирует возможности(и добавляет некоторые другие) Discord api
 
+**Стек**:
+1. Python 3.12.7 - FastAPI, SqlAlchemy, alembic, pydantic, boto3
+2. Golang 1.23.3 - net/http, database/sql, rubenv/sql-migrate, gorilla/mux
+3. PostgreSQL
+4. Nginx
+5. Docker
+
 # Функции
 
 1. Поиск пользователя по username
