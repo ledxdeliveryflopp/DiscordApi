@@ -117,7 +117,7 @@ func AddMessageInChat(writer http.ResponseWriter, request *http.Request) {
 		return
 	case <-success:
 		var message struct {
-			Detail string `json:"Detail"`
+			Detail string `json:"detail"`
 		}
 		message.Detail = "Success add."
 		jsonEncoder.Encode(message)
