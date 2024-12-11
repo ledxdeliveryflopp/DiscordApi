@@ -40,3 +40,9 @@ class BadPasswordException(DetailedHTTPException):
     """Не верный пароль"""
     status_code = 403
     detail = "Bad password."
+
+
+class YandexAuthException(DetailedHTTPException):
+    """Не удалось авторизировать через Yandex"""
+    status_code = 400
+    detail = "Bad status code from Yandex."
