@@ -10,3 +10,9 @@ auth_router = APIRouter(prefix="/auth", tags=['authorization'])
 async def router_login(schemas: LoginSchemas, service: AuthorizationService = Depends(init_authorization_service)):
     """Роутер авторизации"""
     return await service.login(schemas)
+
+
+@auth_router.post("/login_yandex/")
+async def router_login_by_yandex(oauth_token: str, service: AuthorizationService = Depends(init_authorization_service)):
+    """Роутер авторизации"""
+    return await service.login_by_yandex(oauth_token)

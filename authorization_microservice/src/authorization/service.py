@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from http.client import HTTPException
 
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,6 +16,9 @@ class AuthorizationService(AuthorizationRepository):
     async def login(self, schemas: LoginSchemas) -> dict:
         """Авторизация"""
         return await self._repository_login(schemas)
+
+    async def login_by_yandex(self, oauth_token: str) -> dict | HTTPException:
+        return await self._repository_login_by_yandex_with_token(oauth_token)
 
 
 async def init_authorization_service(session: AsyncSession = Depends(get_session),
