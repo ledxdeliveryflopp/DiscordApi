@@ -37,7 +37,7 @@ class RegistrationRepository(BaseService):
     async def _repository_generate_yandex_oauth_url() -> dict | HTTPException:
         """Создание url для авторизации через Yandex"""
         oauth_yandex_url = await generate_yandex_oauth_url()
-        return {"yandex_url": oauth_yandex_url}
+        return oauth_yandex_url
 
     async def _repository_create_user_by_yandex(self, request: Request, oauth_token: str) -> dict | HTTPException:
         """Создание пользователя с помощью yandex oauth2"""
