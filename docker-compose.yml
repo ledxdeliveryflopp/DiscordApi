@@ -68,24 +68,6 @@ services:
     networks:
       - nginx
 
-  nginx-ui:
-    image: 'uozi/nginx-ui:latest'
-    stdin_open: true
-    tty: true
-    container_name: nginx-ui
-    restart: always
-    environment:
-      - TZ=Asia/Novosibirsk
-    volumes:
-      - '/mnt/user/appdata/nginx:/etc/nginx'
-      - '/mnt/user/appdata/nginx-ui:/etc/nginx-ui'
-      - '/var/www:/var/www'
-    ports:
-      - 8080:80
-      - 8443:443
-    networks:
-      - nginx
-
   user_microservice:
     container_name: user
     build:
@@ -112,6 +94,16 @@ services:
       ./api_gateway
     ports:
       - "9000:9000"
+    networks:
+      - sql
+      - nginx
+
+  event_gateway:
+    container_name: events
+    build:
+      ./event_gateway
+    ports:
+      - "2000:2000"
     networks:
       - sql
       - nginx
