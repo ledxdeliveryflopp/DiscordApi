@@ -5,4 +5,3 @@ class LoginSchemas(BaseModel):
     """Схема логина"""
     email: EmailStr
     password: str
-

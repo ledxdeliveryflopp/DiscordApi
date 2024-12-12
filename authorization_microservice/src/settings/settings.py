@@ -68,6 +68,14 @@ class YandexIdSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
+class S3Settings(BaseSettings):
+    """Настройки S3"""
+    secret_access_key: str
+    secret_key_id: str
+
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+
 class Settings(BaseSettings):
     """Настройки"""
     api_settings: ApiSettings
@@ -76,6 +84,7 @@ class Settings(BaseSettings):
     token_settings: TokenSettings
     ipinfo_settings: IpInfoSettings
     yandex_id_settings: YandexIdSettings
+    s3_settings: S3Settings
 
 
 @lru_cache()
@@ -83,7 +92,7 @@ def init_settings() -> Settings:
     """Инициализация настроек"""
     return Settings(api_settings=ApiSettings(), database_settings=DatabaseSettings(),
                     user_database_settings=UserDatabaseSettings(), token_settings=TokenSettings(),
-                    ipinfo_settings=IpInfoSettings(), yandex_id_settings=YandexIdSettings())
+                    ipinfo_settings=IpInfoSettings(), yandex_id_settings=YandexIdSettings(), s3_settings=S3Settings())
 
 
 settings = init_settings()

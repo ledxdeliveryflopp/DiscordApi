@@ -21,3 +21,17 @@ async def create_token(user_id: int, user_email: str) -> dict:
     token_payload = {"user_id": user_id, "user_email": user_email, "random": random_string}
     token = jwt.encode(token_payload, settings.token_settings.secret, algorithm=settings.token_settings.algorithm)
     return {"token": token, "expire": expire_date}
+
+
+async def get_token_payload(token: str) -> dict:
+    """Получение нагрузки токена"""
+    decoded_token = jwt.decode(token, settings.token_settings.secret, algorithms=settings.token_settings.algorithm)
+    return decoded_token
+
+
+async def create_auth_token(user_email: str) -> str:
+    """Генерация токена для авторизации по QR"""
+    random_string = random.choices(string.printable, k=5)
+    token_payload = {"user_email": user_email, "random": random_string}
+    auth_token = jwt.encode(token_payload, settings.token_settings.secret, algorithm=settings.token_settings.algorithm)
+    return auth_token

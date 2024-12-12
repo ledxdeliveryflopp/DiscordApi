@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from sqlalchemy import Select, Result, CursorResult
 from starlette.requests import Request
 
+from src.authorization.utils import create_auth_token
 from src.registration.models import UserModel
 from src.registration.schemas import CreateUserSchemas
 from src.registration.utils import get_user_country, hash_password
@@ -28,8 +29,9 @@ class RegistrationRepository(BaseService):
         if user:
             raise UserExistException
         user_country = await get_user_country(request)
+        auth_token = await create_auth_token(schemas.email)
         new_user = UserModel(**schemas.dict(exclude={"password", "country"}), password=hash_password(schemas.password),
-                             country=user_country)
+                             country=user_country, qr_auth_token=auth_token)
         await self.save_user_object(new_user)
         return {"detail": "success"}
 
