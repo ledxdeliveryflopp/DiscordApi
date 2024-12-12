@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 import uvicorn
 from fastapi.openapi.utils import get_openapi
+from starlette.middleware.cors import CORSMiddleware
 
 from src.settings.config import alembic_ini_settings
 from src.settings.settings import settings
@@ -10,6 +11,14 @@ user_app = FastAPI()
 
 user_app.include_router(user_router)
 
+origins = ["*"]
+
+user_app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+)
 
 def custom_openapi():
     if user_app.openapi_schema:
