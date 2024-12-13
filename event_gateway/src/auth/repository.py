@@ -5,7 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.websockets import WebSocket
 
 from src.auth.models import UserModel
-from src.auth.utils import get_user_id_from_token
+from src.auth.sockets import socket_manager
+from src.auth.utils import check_token_payload
 
 
 @dataclass
@@ -16,36 +17,26 @@ class AuthEventsRepository:
         user = await self.session.execute(Select(UserModel).where(UserModel.id == user_id))
         return user.scalar()
 
-    async def _repository_get_user_auth_token(self, user_id: int) -> str | bool:
-        user = await self._repository_find_user(user_id)
-        auth_token = user.qr_auth_token
-        return auth_token
-
-    async def _repository_handle_auth_websocket(self, websocket: WebSocket, access_token: str) -> None:
-        """..."""
-        await websocket.accept()
+    @staticmethod
+    async def _repository_handle_auth_websocket(websocket: WebSocket, client_id: str) -> None:
+        await socket_manager.create_auth_hub(client_id=client_id)
+        await socket_manager.connect_to_auth_hub(websocket, client_id)
         try:
-            await websocket.send_json({"op": "waiting client answer"})
-            user_id = await get_user_id_from_token(access_token)
-            success = False
-            while not success:
-                receive_data = await websocket.receive_json()
-                receive_user_id = receive_data.get("op")
-                if receive_user_id == user_id:
-                    user = await self._repository_find_user(receive_user_id)
-                    if not user:
-                        await websocket.send_json({"op": "user not found"})
+            status = True
+            while status is True:
+                receive_json = await websocket.receive_json()
+                receive_data = receive_json.get("op")
+                if receive_data == "heartbeat":
+                    await socket_manager.heartbeat_ack(websocket, client_id)
+                if receive_data == "pending_ticket":
+                    user_data = receive_json.get("encrypted_user_payload")
+                    check_user_payload = await check_token_payload(user_data)
+                    if check_user_payload is True:
+                        await socket_manager.broadcast({"op": "access granted", "auth_token": f"{user_data}"},
+                                                       client_id)
+                        await socket_manager.success_close_all_connections(client_id)
+                        status = False
                     else:
-                        user_auth_token = await self._repository_get_user_auth_token(receive_user_id)
-                        await websocket.send_json({"op": "access granted"})
-                        await websocket.send_json({"op": f"user auth token: {user_auth_token}"})
-                        await websocket.close(code=1000, reason=None)
-                        success = True
-                else:
-                    await websocket.send_json({"op": "bad user id"})
-        except Exception as exception:
+                        await socket_manager.send_message_to_client(websocket, client_id, {"op": "bad user payload"})
+        except Exception as exc:
             pass
-
-
-
-
