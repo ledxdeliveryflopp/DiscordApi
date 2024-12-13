@@ -22,13 +22,13 @@ class AuthorizationService(AuthorizationRepository):
         """Авторизация через Yandex ID"""
         return await self._repository_login_by_yandex_with_token(oauth_token)
 
-    async def get_qr_code_url(self) -> dict | HTTPException:
-        """Создание qr кода авторизации"""
-        return await self._repository_get_auth_qr_code()
+    async def create_encrypted_user_payload(self, request: Request) -> dict | HTTPException:
+        """Создание токена авторизации для авторизации через qr код"""
+        return await self._repository_create_encrypted_user_payload(request)
 
-    async def login_by_qr_code(self, auth_token: str) -> dict | HTTPException:
-        """Авторизация через qr код"""
-        return await self._repository_login_by_qr_code(auth_token)
+    async def login_by_auth_token(self, request: Request, client_id) -> dict | HTTPException:
+        """Авторизация с помощью токена авторизации"""
+        return await self._repository_login_by_auth_token(request, client_id)
 
 
 async def init_authorization_service(session: AsyncSession = Depends(get_session),

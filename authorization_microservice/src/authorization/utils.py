@@ -29,9 +29,10 @@ async def get_token_payload(token: str) -> dict:
     return decoded_token
 
 
-async def create_auth_token(user_email: str) -> str:
+async def create_auth_token(user_id: int, user_email: str, user_hashed_password: str) -> str:
     """Генерация токена для авторизации по QR"""
     random_string = random.choices(string.printable, k=5)
-    token_payload = {"user_email": user_email, "random": random_string}
-    auth_token = jwt.encode(token_payload, settings.token_settings.secret, algorithm=settings.token_settings.algorithm)
-    return auth_token
+    token_payload = {"user_id": user_id, "user_email": user_email, "user_hashed_password": user_hashed_password,
+                     "random": random_string}
+    token = jwt.encode(token_payload, settings.token_settings.secret, algorithm=settings.token_settings.algorithm)
+    return token
