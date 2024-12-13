@@ -34,7 +34,7 @@ class AuthConnectionManager:
                     clients_list.append(websocket)
                 else:
                     await websocket.accept()
-                    await websocket.send_json({"op": "clients already in hub"})
+                    await websocket.send_json({"op": "hub is full"})
                     await websocket.close(1000, "full auth hub")
             else:
                 await websocket.accept()
