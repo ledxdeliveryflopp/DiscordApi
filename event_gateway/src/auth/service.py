@@ -11,8 +11,8 @@ from src.settings.database import get_session
 @dataclass
 class AuthEventsService(AuthEventsRepository):
 
-    async def handle_auth_websocket(self, websocket: WebSocket, access_token: str) -> None:
-        return await self._repository_handle_auth_websocket(websocket, access_token)
+    async def handle_auth_websocket(self, websocket: WebSocket, client_id: str) -> None:
+        return await self._repository_handle_auth_websocket(websocket, client_id)
 
 
 async def init_auth_events_service(session: AsyncSession = Depends(get_session)):
