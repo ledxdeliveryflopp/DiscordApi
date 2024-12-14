@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String
+from sqlalchemy import Column, String, ARRAY, DateTime
 
 from src.settings.models import AbstractModel
 
@@ -14,4 +14,13 @@ class UserModel(AbstractModel):
     status = Column(String(length=30), unique=False, nullable=True, comment="статус пользователя")
     country = Column(String(255), unique=False, nullable=False, comment="страна пользователя")
     password = Column(String(255), unique=False, nullable=True, comment="пароль пользователя")
-    qr_auth_token = Column(String, unique=False, nullable=True, comment="токен для авторизации через qr код")
+    clients_fingerprints = Column(ARRAY(String), unique=False, nullable=True,
+                                  comment="ID устройств где была произведена авторизация")
+
+
+class EmailAuthConfirmationCodeModel(AbstractModel):
+    """Модель кода подтверждения авторизации"""
+    __tablename__ = "auth_code"
+
+    code = Column(String(), unique=False, nullable=False, comment="Код подтверждения")
+    expire = Column(DateTime, nullable=False, comment="Срок действия")

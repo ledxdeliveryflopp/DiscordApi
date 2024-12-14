@@ -1,4 +1,5 @@
 from loguru import logger
+from starlette import status
 from starlette.websockets import WebSocket
 
 
@@ -39,7 +40,7 @@ class AuthConnectionManager:
             else:
                 await websocket.accept()
                 await websocket.send_json({"op": "bad hub id"})
-                await websocket.close(1000, "bad hab id")
+                await websocket.close(status.WS_1000_NORMAL_CLOSURE, "bad hab id")
 
     async def heartbeat_ack(self, websocket: WebSocket, client_id: str) -> None:
         """Ответ на heartbeat"""
@@ -67,10 +68,21 @@ class AuthConnectionManager:
             if hub.get("id") == client_id:
                 clients_list = hub.get("clients")
                 for connection in clients_list:
-                    await connection.close(1000, "success auth")
-                    self.auth_hub_list.remove(hub)
-                    self.auth_hub_id_list.remove(client_id)
-                    logger.debug(f"auth hub closed: {client_id}")
+                    await connection.close(status.WS_1000_NORMAL_CLOSURE, "success auth")
+            self.auth_hub_list.remove(hub)
+            self.auth_hub_id_list.remove(client_id)
+            logger.debug(f"auth hub closed: {client_id}")
+
+    async def error_close_all_connections(self, client_id: str) -> None:
+        """Закрытие соедининя со всеми клиентами в группе из-за ошибки выполнения"""
+        for hub in self.auth_hub_list:
+            if hub.get("id") == client_id:
+                clients_list = hub.get("clients")
+                for connection in clients_list:
+                    await connection.close(status.WS_1011_INTERNAL_ERROR, "internal error")
+            self.auth_hub_list.remove(hub)
+            self.auth_hub_id_list.remove(client_id)
+            logger.debug(f"auth hub closed: {client_id}")
 
 
 socket_manager = AuthConnectionManager()
