@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Login attempt from an unknown device</title>
+    <style> body { font-family: Arial,
+    sans-serif; background-color: #f4f4f4;
+        margin: 0; padding: 20px; }
+    .container { max-width: 600px;
+        margin: 0 auto; background-color:
+            white; border-radius: 10px; box-shadow:
+            0 2px 5px rgba(0, 0, 0, 0.1); padding: 30px; }
+    h1 { color: #333; text-align: center; margin-top: 0; }
+    p { line-height: 1.6; margin-bottom: 15px; }
+    .code-container { display: flex; justify-content: center; align-items: center; margin: 40px 0; position: relative; left: 50%;}
+    .confirmation-code { font-size: 24px; font-weight: bold; color: #007bff; padding: 12px 16px; border: 2px solid #007bff; border-radius: 8px; position: relative; left: 50%; transform: translate(-50%, 0);}
+    img { width: 100%; height: auto; display: block; margin: 20px 0; }
+    .button { display: inline-block; background-color: #007bff; color: white; padding: 12px 25px;
+        text-decoration: none; border-radius: 5px; text-align: center; margin-top: 20px; }
+    footer { text-align: center; font-size: 14px; color: #777; margin-top: 50px; } </style>
+</head>
+<body>
+<div class="container">
+    <h1>Hello {{ user_email }}</h1>
+
+    <p>A new login location has been detected, to complete the process, please verify your account: </p>
+
+    <div class="code-container">
+        <button class="confirmation-code">
+            <a href="{{ auth_href }}" style="text-decoration: none">CONFIRM</a>
+        </button>
+    </div>
+    <p>The url is valid for 10 minutes</p>
+    <p>Login request information:</p>
+    <ul>
+        <li>IP: {{ ip }}</li>
+    </ul>
+    <img src="{{ yandex_static_map }}" alt="Карта города">
+
+
+    <footer>
+        This email send from Discord api auth event gateway.<br>
+        Discord api.
+    </footer>
+</div>
+</body>
+</html>
