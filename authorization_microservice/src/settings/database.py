@@ -7,11 +7,15 @@ from src.settings.settings import settings
 
 engine = create_async_engine(url=settings.database_settings.get_full_db_path, echo=False)
 
-user_engine = create_async_engine(url=settings.user_database_settings.get_full_db_path, echo=False)
-
 async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
+user_engine = create_async_engine(url=settings.user_database_settings.get_full_db_path, echo=False)
+
 user_async_session = sessionmaker(user_engine, class_=AsyncSession, expire_on_commit=False)
+
+email_engine = create_async_engine(url=settings.email_database_settings.get_full_db_path, echo=False)
+
+email_async_session = sessionmaker(email_engine, class_=AsyncSession, expire_on_commit=False)
 
 Base = declarative_base()
 
@@ -25,4 +29,10 @@ async def get_session() -> Generator:
 async def get_user_session() -> Generator:
     """Сессия бд пользователей"""
     async with user_async_session() as session:
+        yield session
+
+
+async def get_email_session() -> Generator:
+    """Сессия бд email сообщений"""
+    async with email_async_session() as session:
         yield session

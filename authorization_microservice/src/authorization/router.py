@@ -1,22 +1,31 @@
 from fastapi import APIRouter, Depends
 from starlette.requests import Request
 
-from src.authorization.schemas import LoginSchemas
+from src.authorization.schemas import LoginSchemas, YandexLoginSchemas, ConfirmLoginDeviceSchemas
 from src.authorization.service import AuthorizationService, init_authorization_service
 
 auth_router = APIRouter(prefix="/auth", tags=['authorization'])
 
 
 @auth_router.post("/login/")
-async def router_login(schemas: LoginSchemas, service: AuthorizationService = Depends(init_authorization_service)):
+async def router_login(schemas: LoginSchemas, request: Request,
+                       service: AuthorizationService = Depends(init_authorization_service)):
     """Роутер авторизации"""
-    return await service.login(schemas)
+    return await service.login(schemas, request)
+
+
+@auth_router.post("/confirm_device_and_login/")
+async def router_confirm_new_auth_device_and_login(schemas: ConfirmLoginDeviceSchemas,
+                                                   service: AuthorizationService = Depends(init_authorization_service)):
+    """Роутер авторизации с кодом подтверждения"""
+    return await service.confirm_new_auth_device_and_login(schemas)
 
 
 @auth_router.post("/login_yandex/")
-async def router_login_by_yandex(oauth_token: str, service: AuthorizationService = Depends(init_authorization_service)):
+async def router_login_by_yandex(oauth_token: str, schemas: YandexLoginSchemas,
+                                 service: AuthorizationService = Depends(init_authorization_service)):
     """Роутер авторизации через Yandex ID"""
-    return await service.login_by_yandex(oauth_token)
+    return await service.login_by_yandex(oauth_token, schemas)
 
 
 @auth_router.get("/encrypt_user_data/")

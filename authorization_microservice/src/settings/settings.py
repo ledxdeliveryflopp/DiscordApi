@@ -45,6 +45,23 @@ class UserDatabaseSettings(BaseSettings):
                 f"{self.user_db_host}:{self.user_db_port}/{self.user_db_name}")
 
 
+class EmailDatabaseSettings(BaseSettings):
+
+    email_db_user: str
+    email_db_password: str
+    email_db_host: str
+    email_db_port: str
+    email_db_name: str
+
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    @property
+    def get_full_db_path(self) -> str:
+        """Создание полного url для бд"""
+        return (f"postgresql+asyncpg://{self.email_db_user}:{self.email_db_password}@"
+                f"{self.email_db_host}:{self.email_db_port}/{self.email_db_name}")
+
+
 class TokenSettings(BaseSettings):
     """Настройки токенов"""
     secret: str
@@ -56,7 +73,6 @@ class TokenSettings(BaseSettings):
 class IpInfoSettings(BaseSettings):
     """Настройки ipinfo"""
     ipinfo_url: str
-    ipinfo_token: str
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -68,12 +84,17 @@ class YandexIdSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
-class S3Settings(BaseSettings):
-    """Настройки S3"""
-    secret_access_key: str
-    secret_key_id: str
+class KafkaSettings(BaseSettings):
+    """Настройки для Kafka"""
+    kafka_host: str
+    kafka_port: str
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    @property
+    def get_full_kafka_path(self) -> str:
+        """Создание полного url для бд"""
+        return f"{self.kafka_host}:{self.kafka_port}"
 
 
 class Settings(BaseSettings):
@@ -81,18 +102,20 @@ class Settings(BaseSettings):
     api_settings: ApiSettings
     database_settings: DatabaseSettings
     user_database_settings: UserDatabaseSettings
+    email_database_settings: EmailDatabaseSettings
     token_settings: TokenSettings
     ipinfo_settings: IpInfoSettings
     yandex_id_settings: YandexIdSettings
-    s3_settings: S3Settings
+    kafka_settings: KafkaSettings
 
 
 @lru_cache()
 def init_settings() -> Settings:
     """Инициализация настроек"""
     return Settings(api_settings=ApiSettings(), database_settings=DatabaseSettings(),
-                    user_database_settings=UserDatabaseSettings(), token_settings=TokenSettings(),
-                    ipinfo_settings=IpInfoSettings(), yandex_id_settings=YandexIdSettings(), s3_settings=S3Settings())
+                    user_database_settings=UserDatabaseSettings(), email_database_settings=EmailDatabaseSettings(),
+                    token_settings=TokenSettings(), ipinfo_settings=IpInfoSettings(),
+                    yandex_id_settings=YandexIdSettings(), kafka_settings=KafkaSettings())
 
 
 settings = init_settings()

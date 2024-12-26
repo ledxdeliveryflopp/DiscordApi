@@ -2,7 +2,7 @@ import httpx
 from passlib.context import CryptContext
 from starlette.requests import Request
 
-from src.settings.exceptions import UserIpException
+from src.settings.exceptions import EmptyXForwardedForHeader, EmptyAcceptLanguage
 from src.settings.settings import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -14,19 +14,18 @@ def hash_password(password: str):
 
 
 async def get_user_country(request: Request) -> str:
-    """Страна пользователя по ip"""
-    try:
-        async with httpx.AsyncClient() as client:
-            user_ip_request = await client.get("https://ipinfo.io/ip")
-            user_ip = user_ip_request.text
-            if not user_ip or user_ip_request.status_code != 200:
-                client_host = request.headers.get("accept-language")
-                country = client_host.split(",")[0]
-                return country
-            user_country_request = await client.get(f"{settings.ipinfo_settings.ipinfo_url}{user_ip}"
-                                                    f"?token={settings.ipinfo_settings.ipinfo_token}")
-            data = user_country_request.json()
-            country = data.get("country")
-        return country
-    except Exception as exception:
-        raise UserIpException
+    """Страна пользователя по ip или accept-language"""
+    forwarder_for = request.headers.get("X-Forwarded-For")
+    if not forwarder_for:
+        raise EmptyXForwardedForHeader
+    async with httpx.AsyncClient() as client:
+        ip_info = await client.get(f"{settings.ipinfo_settings.ipinfo_url}{forwarder_for}/json")
+        if ip_info.status_code != 200:
+            accept_lang = request.headers.get("accept-language")
+            if not accept_lang:
+                raise EmptyAcceptLanguage
+            country_code = accept_lang.split(",")[0]
+            return country_code
+        ip_info_json = ip_info.json()
+        ip_info_country = ip_info_json.get("country")
+        return ip_info_country

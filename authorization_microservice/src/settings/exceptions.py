@@ -46,3 +46,34 @@ class YandexAuthException(DetailedHTTPException):
     """Не удалось авторизировать через Yandex"""
     status_code = 400
     detail = "Bad status code from Yandex."
+
+
+class EmptyXForwardedForHeader(DetailedHTTPException):
+    """Пустой заголовок X-Forwarded-For"""
+    status_code = 400
+    detail = "Empty X-Forwarded-For header."
+
+
+class EmptyAcceptLanguage(DetailedHTTPException):
+    """Пустой заголовок accept-language"""
+    status_code = 400
+    detail = "Empty accept-language header."
+
+
+class AddFingerprintException(DetailedHTTPException):
+    """ошибка при добавлении устройства"""
+    status_code = 400
+    detail = "Error while add new auth device."
+
+
+class ConfirmationCodeDontExistException(DetailedHTTPException):
+    """Кода потдверждения уже существует"""
+    status_code = 404
+    detail = "Confirmation code dont exist."
+
+
+class ConfirmationCodeExpireException(DetailedHTTPException):
+    """Срок действия кода подтверждения истек"""
+    status_code = 400
+    detail = "Confirmation code expired."
+

@@ -36,3 +36,10 @@ async def create_auth_token(user_id: int, user_email: str, user_hashed_password:
                      "random": random_string}
     token = jwt.encode(token_payload, settings.token_settings.secret, algorithm=settings.token_settings.algorithm)
     return token
+
+
+async def create_confirmation_code(user_id: int, client_fingerprint: str) -> str:
+    """Создание токена подтверждения"""
+    token_payload = {"user_id": user_id, "client_fingerprint": client_fingerprint}
+    token = jwt.encode(token_payload, settings.token_settings.secret, algorithm=settings.token_settings.algorithm)
+    return token

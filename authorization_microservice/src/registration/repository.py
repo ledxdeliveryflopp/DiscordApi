@@ -5,7 +5,7 @@ from fastapi import HTTPException
 from sqlalchemy import Select, Result, CursorResult
 from starlette.requests import Request
 
-from src.authorization.utils import create_auth_token
+
 from src.registration.models import UserModel
 from src.registration.schemas import CreateUserSchemas
 from src.registration.utils import get_user_country, hash_password
