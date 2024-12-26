@@ -166,7 +166,7 @@ Accept-Language обязателен если не удастся определ
 5. Регистрация пользователя через YandexID
 
 ```http request
-POST /auth/yandex_oauth_register/?oauth_token=
+POST /auth/yandex_oauth_register/?oauth_token=fsdt43d4fae23f5qwf
 ```
 ### Query параметры
 | Параметр      | Тип      | Описание                                                                        |
@@ -275,7 +275,7 @@ POST /private/start-chat/
 ### 9. Получение N колличества сообщений в приватном чате
 
 ```http request
-GET /private/"chat_id"/messages?limit=&offset=
+GET /private/"chat_id"/messages?limit=50&offset=0
 ```
 ### Query параметры
 
@@ -394,7 +394,7 @@ GET /private/chat-list/
 13. Авторизация через QR код
 
 ```http request
-WEBSOCKET /auth_events/qr_auth/?client_id=&client_ip=&client_type=
+WEBSOCKET /auth_events/qr_auth/?client_id=996a37cf8751bc151a1a0f8&client_ip=188.131.21.22&client_type=pc
 ```
 ### Query параметры
 | Параметр      | Тип      | Описание                                                              |
@@ -409,7 +409,7 @@ client_type - Тип клиента передается "pc" в браузер�
 
 Клиент генерирует qr код формата
 ```http request
-WEBSOCKET /auth_events/qr_auth/?client_id=&client_ip=&client_type=mb
+WEBSOCKET /auth_events/qr_auth/?client_id=996a37cf8751bc151a1a0f8&client_ip=188.131.21.22&client_type=mb
 ```
 client_id и client_ip передавать те, которые используется для подключение клиента(браузера)
 
@@ -473,7 +473,7 @@ client_id и client_ip передавать те, которые использ�
 ### 14. Авторизация через auth_token полученного из qr
 
 ```http request
-GET /auth/qr_auth/?client_id=
+GET /auth/qr_auth/?client_id=996a37cf8751bc151a1a0f8
 ```
 ### Query параметры
 | Параметр        | Тип      | Описание                                                              |
