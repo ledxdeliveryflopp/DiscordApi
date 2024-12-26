@@ -14,3 +14,7 @@ class BaseService(BaseRepository):
     async def delete_object(self, deleted_object: object) -> None:
         """Удалить объект из бд"""
         return await self._repository_delete_object(deleted_object)
+
+    async def delete_confirmation_code(self, deleted_object: object) -> None:
+        """Удалить объект из бд"""
+        return await self._repository_delete_confirmation_code(deleted_object)

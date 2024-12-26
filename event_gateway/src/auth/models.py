@@ -18,9 +18,10 @@ class UserModel(AbstractModel):
                                   comment="ID устройств где была произведена авторизация")
 
 
-class EmailAuthConfirmationCodeModel(AbstractModel):
-    """Модель кода подтверждения авторизации"""
-    __tablename__ = "auth_code"
+class ConfirmationCodeModel(AbstractModel):
+    """Модель кодов подтверждения авторизации"""
+    __tablename__ = "confirmation_code"
 
-    code = Column(String(), unique=False, nullable=False, comment="Код подтверждения")
+    code = Column(String, nullable=False, comment="код подтверждения")
     expire = Column(DateTime, nullable=False, comment="Срок действия")
+

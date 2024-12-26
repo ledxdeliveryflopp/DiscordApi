@@ -1,96 +1,129 @@
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 
-from fastapi import WebSocketException
+from loguru import logger
 from sqlalchemy import Select
-from sqlalchemy.ext.asyncio import AsyncSession
-from starlette import status
-from starlette.websockets import WebSocket
+from starlette.websockets import WebSocket, WebSocketDisconnect
 
-from src.auth.models import UserModel, EmailAuthConfirmationCodeModel
+from src.auth.models import UserModel, ConfirmationCodeModel
 from src.auth.sockets import socket_manager
-from src.auth.utils import check_token_payload, get_user_id_from_token, get_request_user_ip, create_confirmation_code
-from src.email.service import email_service
+from src.auth.utils import check_token_payload, get_user_id_from_token, create_confirmation_code
+from src.broker.router import broker_service
 from src.settings.service import BaseService
 
 
 @dataclass
 class AuthEventsRepository(BaseService):
-    session: AsyncSession
 
     async def _repository_find_user(self, user_id: int) -> UserModel:
         """Поиск пользователя по id"""
         user = await self.session.execute(Select(UserModel).where(UserModel.id == user_id))
         return user.scalar()
 
-    async def _repository_find_confirmation_code(self, code: str) -> EmailAuthConfirmationCodeModel:
+    async def _repository_find_confirmation_code(self, code: str) -> ConfirmationCodeModel:
         """Поиск кода подтверждения"""
-        code = await self.session.execute(Select(EmailAuthConfirmationCodeModel)
-                                          .where(EmailAuthConfirmationCodeModel.code == code))
-        return code.scalar()
+        confirmation_code = await self.email_session.execute(
+            Select(ConfirmationCodeModel).where(ConfirmationCodeModel.code == code))
+        return confirmation_code.scalar()
 
-    async def _repository_create_confirmation_code(self, code: str) -> None:
-        """Создание кода подтверждения"""
-        expire_date = datetime.utcnow() + timedelta(minutes=10)
-        new_code = EmailAuthConfirmationCodeModel(code=code, expire=expire_date)
-        await self.save_object(new_code)
+    @staticmethod
+    async def handle_heartbeat_op(websocket: WebSocket):
+        await websocket.send_json({"op": "heartbeat_ack"})
 
-    async def _repository_handle_auth_websocket(self, websocket: WebSocket, client_id: str) -> None:
-        """Обработчик сокета авторизации"""
-        await socket_manager.create_auth_hub(client_id=client_id)
-        await socket_manager.connect_to_auth_hub(websocket, client_id)
-        try:
-            success = True
-            while success is True:
-                receive_json = await websocket.receive_json()
-                receive_data = receive_json.get("op")
-                if receive_data == "heartbeat":
-                    await socket_manager.heartbeat_ack(websocket, client_id)
-                if receive_data == "pending_ticket":
-                    user_data = receive_json.get("encrypted_user_payload")
-                    check_user_payload = await check_token_payload(user_data)
-                    if check_user_payload is False:
-                        await socket_manager.send_message_to_client(websocket, client_id, {"op": "bad user payload"})
-                    user_id = await get_user_id_from_token(user_data)
-                    user_info = await self._repository_find_user(user_id)
-                    if not user_info:
-                        await socket_manager.send_message_to_client(websocket, client_id, {"op": "user not found"})
-                    user_clients = user_info.clients_fingerprints
+    async def handle_pending_ticket_op(self, websocket: WebSocket, client_id: str, receive_data: dict, client_ip: str):
+        encrypted_user_payload = receive_data.get("encrypted_user_payload")
+        if not encrypted_user_payload:
+            await websocket.send_json({"op": "Empty encrypted_user_payload variable"})
+        else:
+            check_user_payload = await check_token_payload(encrypted_user_payload)
+            if check_user_payload is False:
+                await websocket.send_json({"op": "Error while check user payload"})
+            else:
+                user_id = await get_user_id_from_token(encrypted_user_payload)
+                check_user = await self._repository_find_user(user_id)
+                if not check_user:
+                    await websocket.send_json({"op": "User saved in encrypted payload dont found"})
+                else:
+                    user_clients = check_user.clients_fingerprints
                     if client_id not in user_clients:
-                        request_user_ip = await get_request_user_ip()
-                        confirmation_code = await create_confirmation_code(user_info.id)
-                        await self._repository_create_confirmation_code(confirmation_code)
-                        await email_service.send_email_message(user_info.email, request_user_ip, confirmation_code)
-                        await socket_manager.send_message_to_client(websocket, client_id,
-                                                                    {"op": "Enter confirmation code from email message"})
+                        await websocket.send_json({"op": f"New auth device detected,"
+                                                         f" send confirmation code to: {check_user.email}"})
+                        confirmation_code = await create_confirmation_code(user_id, client_id)
+                        await broker_service.send_email_data_in_queue(check_user.email, confirmation_code,
+                                                                      client_ip)
                     else:
-                        await socket_manager.broadcast({"op": "access granted", "auth_token": f"{user_data}"},
-                                                       client_id)
-                        user_info = await self._repository_find_user(user_id)
-                        new_list = []
-                        for i in user_info.clients_fingerprints:
-                            if i == client_id:
-                                pass
-                            else:
-                                new_list.append(i)
-                        new_list.append(client_id)
-                        user_info.clients_fingerprints = new_list
-                        await self.save_object(user_info)
+                        await socket_manager.broadcast({"op": "Success auth",
+                                                        "user_payload": encrypted_user_payload}, client_id)
                         await socket_manager.success_close_all_connections(client_id)
-                        success = False
-                if receive_data == "pending_ticket_confirmation":
-                    code = receive_json.get("code")
-                    confirmation_code = await self._repository_find_confirmation_code(code)
-                    if not confirmation_code:
-                        await socket_manager.send_message_to_client(websocket, client_id,
-                                                                    {"op": "Bad confirmation code"})
-                    if confirmation_code.expire < datetime.utcnow():
-                        await socket_manager.send_message_to_client(websocket, client_id,
-                                                                    {"op": "Confirmation code expire"})
-                        await self.delete_object(confirmation_code)
-                    await socket_manager.broadcast({"op": "success confirmation"}, client_id)
-                    await self.delete_object(confirmation_code)
-        except Exception as unknown_exception:
-            await socket_manager.broadcast({"op": "error, disconnect all clients in hub"}, client_id)
-            await socket_manager.error_close_all_connections(client_id)
-            raise WebSocketException(code=status.WS_1011_INTERNAL_ERROR, reason="server error")
+                        return False
+
+    async def handle_pending_ticket_confirmation_op(self, websocket: WebSocket, client_id: str, receive_data: dict):
+        confirmation_code = receive_data.get("confirmation_code")
+        if not confirmation_code:
+            await websocket.send_json({"op": "Empty confirmation_code variable"})
+        else:
+            check_code = await self._repository_find_confirmation_code(confirmation_code)
+            if not check_code:
+                await websocket.send_json({"op": "Confirmation code dont exist"})
+            elif check_code.expire < datetime.utcnow():
+                await self.delete_confirmation_code(check_code)
+                await websocket.send_json({"op": "Confirmation code expired"})
+            else:
+                encrypted_user_payload = receive_data.get("encrypted_user_payload")
+                if not encrypted_user_payload:
+                    await websocket.send_json({"op": "Empty encrypted_user_payload variable"})
+                else:
+                    check_user_payload = await check_token_payload(encrypted_user_payload)
+                    if check_user_payload is False:
+                        await websocket.send_json({"op": "Error while check user payload"})
+                    else:
+                        user_id = await get_user_id_from_token(encrypted_user_payload)
+                        check_user = await self._repository_find_user(user_id)
+                        if not check_user:
+                            await websocket.send_json({"op": "User saved in encrypted payload dont found"})
+                        else:
+                            await self.delete_confirmation_code(check_code)
+                            await socket_manager.broadcast({"op": "Success auth",
+                                                            "user_payload": encrypted_user_payload}, client_id)
+                            await socket_manager.success_close_all_connections(client_id)
+                            return False
+
+    async def handle_opcode(self, websocket: WebSocket, receive_data: dict, opcode: str, client_id: str,
+                            client_ip: str) -> bool | None:
+        """Обработка опкодов вебсокета авторизации"""
+        check_hub = await socket_manager.check_hub_exist(client_id)
+        if check_hub is True:
+            if opcode == "heartbeat":
+                await self.handle_heartbeat_op(websocket)
+            elif opcode == "pending_ticket":
+                handle_status = await self.handle_pending_ticket_op(websocket, client_id, receive_data, client_ip)
+                if handle_status is False:
+                    return False
+            elif opcode == "pending_ticket_confirmation":
+                handle_status = await self.handle_pending_ticket_confirmation_op(websocket, client_id, receive_data)
+                if handle_status is False:
+                    return False
+
+    async def _repository_handle_auth_websocket(self, websocket: WebSocket, client_id: str, client_ip: str,
+                                                client_type: str) -> None:
+        """Обработчик сокета авторизации"""
+        await socket_manager.create_auth_hub(client_id, client_ip)
+        await socket_manager.connect_to_auth_hub(websocket, client_id, client_ip, client_type)
+        try:
+            run = True
+            while run is True:
+                command_list: list = ["heartbeat", "pending_ticket", "pending_ticket_confirmation"]
+                receive_data = await websocket.receive_json()
+                receive_opcode = receive_data.get("op")
+                if receive_opcode in command_list:
+                    handler_status = await self.handle_opcode(websocket, receive_data, receive_opcode, client_id,
+                                                              client_ip)
+                    logger.debug(f"handle status: {handler_status}")
+                    if handler_status is False:
+                        run = False
+                else:
+                    await websocket.send_json({"op": "Opcode dont exits"})
+        except WebSocketDisconnect:
+            hub_status = await socket_manager.web_socket_disconnect_handler(websocket, client_id)
+            if hub_status is False:
+                return

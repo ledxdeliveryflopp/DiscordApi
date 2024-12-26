@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 class BaseRepository:
     """Репозиторий бд"""
     session: AsyncSession
+    email_session: AsyncSession
 
     async def _repository_save_object(self, new_object: object) -> None:
         """Сохранить объект в бд"""
@@ -24,3 +25,11 @@ class BaseRepository:
             await self.session.commit()
         except Exception as exc:
             await self.session.rollback()
+
+    async def _repository_delete_confirmation_code(self, deleted_object: object) -> None:
+        """Удалить код подтвердждения из бд"""
+        try:
+            await self.email_session.delete(deleted_object)
+            await self.email_session.commit()
+        except Exception as exc:
+            await self.email_session.rollback()
