@@ -24,6 +24,8 @@ API которое частично эмулирует возможности(и
 12. Получение всех переписок пользователя(приватной)
 13. Авторизация через QR код(если пользователь авторизарован на телефоне)
 14. Генерация токена авторизации для авторизации через QR код
+15. Создание токена с информацией о юзере для авторизации через QR код
+16. Авторизация с кодом подтверждения(новое устройство авторизации)
 
 # Установка приложения
 
@@ -45,124 +47,280 @@ alembic upgreade head
 ```
 
 # Документация к API
-1. Поиск пользователя по username - "host"/users/user/?username=
-```json
-{
-  "request header": "Authorization",
-  "request params": {
-    "username":  string
-  },
-  "response body": [{
-      "id": int,
-      "username": string,
-      "avatar_url": string
-    }]
-  
-}
-```
-2. Загрузка аватарки пользователю по токену - "host"/users/upload-avatar/
-```json
-{
-  "request headers": ["Authorization", {"Content-Type": "multipart/form-data;"}],
-  "request body": {
-    "avatar_file": file
-  },
-  "response body": {"detail": "success"}
-}
-```
-3. Создание ссылки регистрации через YandexID -"host"/auth/yandex_oauth_url/
-```json
-{
-  "response body": {"yandex_url": string}
-}
-```
-4. Регистрация пользователя - "host"/auth/register/
-```json
-{
-  "request header": "Accept-Language", // не обязательно
-  "request body": {
-      "username": string,
-      "email": string,
-      "description": string, // не обязательно
-      "status": string, // не обязательно
-      "password": string
-  },
-  "response body": {"detail": "success"}
-}
-```
-5. Регистрация пользователя через YandexID - "host"/auth/yandex_oauth_register/?oauth_token=
-```json
-{
-  "request header": "Accept-Language", // не обязательно
-  "request params": {
-    "oauth_token":  string
-  },
-  "response body": {"detail": "success"}
-}
-```
-6. Авторизация пользователя по email + password - "host"/auth/login/
-```json
-{
-  "request body": {
-    "email":  string,
-  "password":  string
-  },
-  "response body": {"token": string, "type": "Bearer"}
-}
-```
-7. Проверка токена через api gateway + nginx - "host"/gateway/get-token/
-```json
-{
-  "request header": "Authorization"
-}
-```
-8. Создание переписки - "host"/private/start-chat/
-```json
-{
-  "request header": "Authorization",
-  "request body": {
-    "recipient_id":  int,
-    "text":  string // не обязательно
-  },
-  "response body": {"chat_id": integer}
-}
-```
-9. Получение N колличества сообщений в определенной переписке - "host"/private/"chat_id"/messages?limit=&offset=
 
+### 1. Поиск пользователя по username
+
+```http request
+GET /users/user/?username=LedxDelivery
+```
+### Query параметры
+| Параметр   | Тип      | Описание                           |
+|:-----------|:---------|:-----------------------------------|
+| `username` | `string` | **Обязательно**. Имя пользователя  |
+
+### Заголовки
+| Заголовок       | Тип      | Описание                               |
+|:----------------|:---------|:---------------------------------------|
+| `Authorization` | `string` | **Обязательно**. jwt токен авторизации |
+
+### Ответ
 ```json
 {
-  "request header": "Authorization",
-  "request path params": {
-    "chat_id": int
-  },
-  "request params": {
-    "limit": integer,
-    "offset": integer
-  },
-  "response body": [{
-    "id": integer,
-    "text": string,
-    "answer": integer,
-    "chat_id": integer,
-    "message_owner": {
-      "id": integer,
-      "username": string,
-      "avatar_url": string
-    }
-  }]
+  "id": integer,
+  "username": string,
+  "avatar_url": string | None
 }
 ```
-10. Получение информации о определенной переписке - "host"/private/"chat_id"/info/
+### Статус коды
+| Код | Описание                |
+|:----|:------------------------|
+| 200 | `OK`                    |
+| 401 | `Unauthorized`          |
+| 404 | `NOT FOUND`             |
+| 500 | `INTERNAL SERVER ERROR` |
 
+### 2. Загрузка аватарки пользователю по токену
+
+```http request
+PATCH /users/upload-avatar/
+```
+
+### Заголовки
+| Заголовок       | Тип      | Описание                               |
+|:----------------|:---------|:---------------------------------------|
+| `Authorization` | `string` | **Обязательно**. jwt токен авторизации |
+
+### Тело запроса
 ```json
 {
-  "request header": "Authorization",
-  "request path params": {
-    "chat_id": int
-  },
-  "response body": {
+  "avatar_file": file
+}
+```
+### Ответ
+```json
+{
+  "Detail": "success"
+}
+```
+### Статус коды
+| Код | Описание                |
+|:----|:------------------------|
+| 200 | `OK`                    |
+| 401 | `Unauthorized`          |
+| 500 | `INTERNAL SERVER ERROR` |
+
+### 3. Создание ссылки регистрации через YandexID
+
+```http request
+GET /auth/yandex_oauth_url/
+```
+### Ответ
+```json
+{
+  "yandex_url": string
+}
+```
+### Статус коды
+| Код | Описание                |
+|:----|:------------------------|
+| 200 | `OK`                    |
+| 500 | `INTERNAL SERVER ERROR` |
+
+### 4. Регистрация пользователя - "host"/auth/register/
+
+```http request
+POST /auth/register/
+```
+### Заголовки
+| Заголовок         | Тип      | Описание                                           |
+|:------------------|:---------|:---------------------------------------------------|
+| `Accept-Language` | `string` | **Не обязательно при условии**.список языко ответа |
+| `X-Forwarded-For` | `string` | **Обязательно**. ip адрес клиента                  |
+
+Accept-Language обязателен если не удастся определить страну по заголовку X-Forwarded-For 
+
+### Тело запроса
+```json
+{
+  "username": string,
+  "email": string,
+  "description": string, // не обязательно
+  "status": string, // не обязательно
+  "password": string
+}
+```
+### Ответ
+```json
+{
+  "detail": "success"
+}
+```
+### Статус коды
+| Код | Описание               |
+|:----|:-----------------------|
+| 200 | `OK`                   |
+| 400 | `BAD REQUEST`          |
+| 422 | `Unprocessable Entity` |
+| 500 | `INTERNAL SERVER ERROR` |
+
+5. Регистрация пользователя через YandexID
+
+```http request
+POST /auth/yandex_oauth_register/?oauth_token=
+```
+### Query параметры
+| Параметр      | Тип      | Описание                                                                        |
+|:--------------|:---------|:--------------------------------------------------------------------------------|
+| `oauth_token` | `string` | **Обязательно** Oauth токен получаемый при авторизации через эндпоинт в 3 этапе |
+
+### Ответ
+```json
+{
+  "detail": "success"
+}
+```
+### Статус коды
+| Код | Описание               |
+|:----|:-----------------------|
+| 200 | `OK`                   |
+| 400 | `BAD REQUEST`          |
+
+### 6. Авторизация пользователя по email + password
+
+```http request
+POST /auth/login/
+```
+### Заголовки
+| Заголовок         | Тип      | Описание                                      |
+|:------------------|:---------|:----------------------------------------------|
+| `X-Forwarded-For` | `string` | **Обязательно при условии**. ip адрес клиента |
+
+X-Forwarded-For обязателен если авторизация происходит с нового устройства
+
+### Тело запроса
+```json
+{
+  "email": string,
+  "password": string,
+  "client_fingerprint": string
+}
+```
+### Ответ
+```json
+{
+  "token": string,
+  "type": "Bearer"
+}
+```
+ИЛИ
+```json
+{
+  "detail": "Confirmation code send to: {string}"
+}
+```
+### Статус коды
+| Код | Описание                |
+|:----|:------------------------|
+| 200 | `OK`                    |
+| 400 | `BAD REQUEST`           |
+| 404 | `NOT FOUND`             |
+| 500 | `INTERNAL SERVER ERROR` |
+
+### 7. Проверка токена через api gateway
+
+```http request
+GET /gateway/get-token/
+```
+### Заголовки
+| Заголовок       | Тип      | Описание                               |
+|:----------------|:---------|:---------------------------------------|
+| `Authorization` | `string` | **Обязательно**. jwt токен авторизации |
+
+### Статус коды
+| Код | Описание                |
+|:----|:------------------------|
+| 200 | `OK`                    |
+| 403 | `FORBIDDEN`             |
+| 500 | `INTERNAL SERVER ERROR` |
+
+8. Создание приватного чата
+
+```http request
+POST /private/start-chat/
+```
+### Заголовки
+| Заголовок       | Тип      | Описание                               |
+|:----------------|:---------|:---------------------------------------|
+| `Authorization` | `string` | **Обязательно**. jwt токен авторизации |
+
+### Тело запроса
+```json
+{
+  "recipient_id": integer
+}
+```
+### Ответ
+```json
+{
+  "chat_id": integer
+}
+```
+### Статус коды
+| Код | Описание                |
+|:----|:------------------------|
+| 200 | `OK`                    |
+| 400 | `BAD REQUEST`           |
+| 500 | `INTERNAL SERVER ERROR` |
+
+### 9. Получение N колличества сообщений в приватном чате
+
+```http request
+GET /private/"chat_id"/messages?limit=&offset=
+```
+### Query параметры
+
+| Параметр  | Тип       | Описание                                        |
+|:----------|:----------|:------------------------------------------------|
+| `chat_id` | `integer` | **Обязательно**. id приватного чата             |
+| `limit`   | `integer` | **Обязательно**. колличество сообщений          |
+| `offset`  | `integer` | **Обязательно**. срез(лучше оставить пока на 0) |
+
+### Ответ
+```json
+[{
+  "id": integer,
+  "text": string,
+  "answer": integer,
+  "chat_id": integer,
+  "message_owner": {
     "id": integer,
-    "chat_starter": {
+    "username": string,
+    "avatar_url": string
+  }
+}]
+```
+### Статус коды
+| Код | Описание                |
+|:----|:------------------------|
+| 200 | `OK`                    |
+| 400 | `BAD REQUEST`           |
+| 500 | `INTERNAL SERVER ERROR` |
+
+### 10. Получение информации о приватном чате
+
+```http request
+GET /private/"chat_id"/info/
+```
+### Query параметры
+| Параметр  | Тип       | Описание                                        |
+|:----------|:----------|:------------------------------------------------|
+| `chat_id` | `integer` | **Обязательно**. id приватного чата             |
+
+### Ответ
+```json
+{
+  "id": integer,
+  "chat_starter": {
       "id": integer,
       "username": string,
       "avatar_url": string
@@ -172,91 +330,219 @@ alembic upgreade head
       "username": string,
       "avatar_url": string
     }
-  }
 }
 ```
-11. Добавление сообщения в определенную переписку - "host"/private/add-message/"chat_id"/
+### Статус коды
+| Код | Описание                |
+|:----|:------------------------|
+| 200 | `OK`                    |
+| 400 | `BAD REQUEST`           |
+| 500 | `INTERNAL SERVER ERROR` |
+
+### 11. Добавление сообщения в приватный чат
+
+```http request
+POST /private/add-message/"chat_id"/
+```
+### Query параметры
+| Параметр  | Тип       | Описание                                        |
+|:----------|:----------|:------------------------------------------------|
+| `chat_id` | `integer` | **Обязательно**. id приватного чата             |
+
+### Тело запроса
 ```json
 {
-  "request header": "Authorization",
-  "request path params": {
-    "chat_id": int
-  },
-  "request body": {
-    "text": string,
-    "message_answer_id": int // не обязательно
-  },
-  "response body": {
-    "detail": "Success add."
-    }
+  "text": string
 }
 ```
-12. Получение всех переписок пользователя - "host"/private/chat-list/
-
+### Ответ
 ```json
 {
-  "request header": "Authorization",
-  "response body": [
-    {
-      "id":integer
-    }
-  ]
+  "detail": "Success add."
 }
 ```
-13. Авторизация через QR код(если пользователь авторизарован на телефоне) - ws://"host"/auth_events/qr_auth/?client_id=
-    (Реализовано через websocket)
+### Статус коды
+| Код | Описание                |
+|:----|:------------------------|
+| 200 | `OK`                    |
+| 400 | `BAD REQUEST`           |
+| 500 | `INTERNAL SERVER ERROR` |
+
+### 12. Получение всех приватных чатов пользователя
+
+```http request
+GET /private/chat-list/
+```
+### Заголовки
+| Заголовок       | Тип      | Описание                               |
+|:----------------|:---------|:---------------------------------------|
+| `Authorization` | `string` | **Обязательно**. jwt токен авторизации |
+
+### Ответ
+```json
+[{
+  "id": integer
+}]
+```
+### Статус коды
+| Код | Описание                |
+|:----|:------------------------|
+| 200 | `OK`                    |
+| 400 | `BAD REQUEST`           |
+| 500 | `INTERNAL SERVER ERROR` |
+
+13. Авторизация через QR код
+
+```http request
+WEBSOCKET /auth_events/qr_auth/?client_id=&client_ip=&client_type=
+```
+### Query параметры
+| Параметр      | Тип      | Описание                                                              |
+|:--------------|:---------|:----------------------------------------------------------------------|
+| `client_id`   | `string` | **Обязательно**. fingerprint устройства(является id хаба авторизации) |
+| `client_ip`   | `string` | **Обязательно**. ip адрес клиета                                      |
+| `client_type` | `string` | **Обязательно**. типо клиента(mb/pc)                                  |
+
+client_id - Создается через js в браузере
+client_ip - Определеятся через js в браузере
+client_type - Тип клиента передается "pc" в браузере
+
+Клиент генерирует qr код формата
+```http request
+WEBSOCKET /auth_events/qr_auth/?client_id=&client_ip=&client_type=mb
+```
+client_id и client_ip передавать те, которые используется для подключение клиента(браузера)
+
+### Опкоды
+
+### 1. heartbeat_ack
+### Тело запроса
 ```json
 {
-  "request query params": {
-    "client_id": string // уникальный идентификатор клиента(браузера или пк)
-  },
-  "request body": {
-    "op": int // любая передаваемая информация по websocket
-  },
-  "request body description": {
-    "op_list": [
-      {
-        "op": "heartbeat" // проверка подлючения к серверу
-        "websocket_answer": {"op": "heartbeat_ack"} // ответ api
-      },
-      {
-        "op": "pending_ticket", // передача токена авторизации через телефон
-        "encrypted_user_payload": string, // токен авторизации
-        "websocket_answer": {"op": "access granted", "auth_token": string} // ответ api
-      }
-    ]
-  }
+  "op": "heartbeat"
 }
 ```
-Образно возьмем такой порядок действий:
-
-1. у пользователя на сайте генерируется qr содержащий ссылку на вебсокет + идентификатор устройства
-2. Пользователь сканирует qr приложением на телефоне
-3. Приложение совершает запрос на эндпоинт где генерируется зашифрованная информация о юзере и получает токен
-4. Приложение отправляет опкод **"pending_ticket"** с **"encrypted_user_payload"(токен из 3 этапа)**
-5. API проверяет токен и если все успешно отправляет его всем клиентам и разрывает соединение c всеми клиентами с статус кодом 1000
-6. Сайт после получения токена совершает запрос на эндпоинт авторизации передавая токен c идентификатором устройства  и получает jwt токен
-
-PS.
-1. Максимальное колличество соединений на группу - 2 клиента
-2. Если попытается зайти 3 клиент то ему отправится опкод и разорвется соединение с статус кодом 1000
-```json
-{"op": "clients already in hub"}
-```
-3. Если клиент попытается зайти в группу с неправильным client_id(каждая группа имеет id = client_id), то ему отправится опкод и разорвется соединение с статус кодом 1000
-```json
-{"op": "hub is full"}
-```
-
-14. Авторизация через auth_token - "host"/auth/qr_auth/?client_id=
+### Ответ
 ```json
 {
-  "request query params": {
-    "client_id": string // уникальный идентификатор клиента(браузера или пк)
-  },
-  "request header": {
-    "Authorization": string // токен авторизации
-  },
-  "response body": {"token": string, "type": "Bearer"}
+  "op": "heartbeat_ack"
 }
 ```
+### 2. pending_ticket
+### Тело запроса
+```json
+{
+  "op": "pending_ticket",
+  "encrypted_user_payload": string
+}
+```
+### Ответ
+```json
+{
+  "op": "New auth device detected, send confirmation code to: {string}"
+}
+```
+ИЛИ
+```json
+{
+  "op": "Success auth",
+  "user_payload": string
+}
+```
+### 3. pending_ticket_confirmation
+### Тело запроса
+```json
+{
+  "op": "pending_ticket_confirmation",
+  "confirmation_code": string
+}
+```
+### Ответ
+```json
+{
+  "op": "Success auth",
+  "user_payload": string
+}
+```
+### Статус коды
+| Код  | Описание                |
+|:-----|:------------------------|
+| 1000 | `NORMAL CLOSURE`        |
+| 1006 | `ABNORMAL CLOSURE`      |
+
+### 14. Авторизация через auth_token полученного из qr
+
+```http request
+GET /auth/qr_auth/?client_id=
+```
+### Query параметры
+| Параметр        | Тип      | Описание                                                              |
+|:----------------|:---------|:----------------------------------------------------------------------|
+| `client_id`     | `string` | **Обязательно**. fingerprint устройства                               |
+| `Authorization` | `string` | **Обязательно**. токен полученный после успешной авторизации через qr |
+
+### Ответ
+```json
+{
+  "token": string,
+  "type": "Bearer"
+}
+```
+### Статус коды
+| Код | Описание                |
+|:----|:------------------------|
+| 200 | `OK`                    |
+| 404 | `NOT FOUND`             |
+| 403 | `FORBIDDEN`             |
+| 500 | `INTERNAL SERVER ERROR` |
+
+### 15. Создание токена с информацией о юзере(для авторизации через qr)
+
+```http request
+GET /auth/encrypt_user_data/
+```
+### Заголовки
+| Заголовок       | Тип      | Описание                               |
+|:----------------|:---------|:---------------------------------------|
+| `Authorization` | `string` | **Обязательно**. jwt токен авторизации |
+
+### Ответ
+```json
+{
+  "token": string
+}
+```
+### Статус коды
+| Код | Описание                |
+|:----|:------------------------|
+| 200 | `OK`                    |
+| 404 | `NOT FOUND`             |
+| 403 | `FORBIDDEN`             |
+| 500 | `INTERNAL SERVER ERROR` |
+
+### 16. Авторизация с кодом подтверждения
+
+```http request
+POST /auth/confirm_device_and_login/
+```
+### Тело запроса
+```json
+{
+  "email": string,
+  "password": string,
+  "confirmation_code": string
+}
+```
+### Ответ
+```json
+{
+  "token": string,
+  "type": "Bearer"
+}
+```
+### Статус коды
+| Код | Описание                |
+|:----|:------------------------|
+| 200 | `OK`                    |
+| 404 | `NOT FOUND`             |
+| 500 | `INTERNAL SERVER ERROR` |
