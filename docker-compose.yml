@@ -29,19 +29,19 @@ services:
       - "5444:5432"
     networks:
       - sql
-#
-#  chat_database:
-#    container_name: chat_database
-#    image: postgres
-#    restart: on-failure
-#    environment:
-#      POSTGRES_DB: chat
-#      POSTGRES_USER: postgres
-#      POSTGRES_PASSWORD: admin
-#    ports:
-#      - "5445:5432"
-#    networks:
-#      - sql
+
+  email_database:
+    container_name: email_database
+    image: postgres
+    restart: on-failure
+    environment:
+      POSTGRES_DB: email
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "5445:5432"
+    networks:
+      - sql
 
   pgadmin:
     container_name: pgadmin4
@@ -68,6 +68,49 @@ services:
     networks:
       - nginx
 
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.2.1
+    hostname: zookeeper
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: apache/kafka:latest
+    container_name: kafka
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://kafka:9092,CONTROLLER://kafka:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_CREATE_TOPICS: "auth-email-queue:1:1"
+    ports:
+      - 9092:9092
+    networks:
+      - kafka
+
+  kafka-ui:
+    container_name: kafka-ui
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - 8082:8080
+    environment:
+      DYNAMIC_CONFIG_ENABLED: true
+    networks:
+      - kafka
+
   user_microservice:
     container_name: user
     build:
@@ -87,6 +130,7 @@ services:
     networks:
       - sql
       - nginx
+      - kafka
 
   api_gateway:
     container_name: gateway
@@ -107,6 +151,7 @@ services:
     networks:
       - sql
       - nginx
+      - kafka
 
   private_messages_microservice:
     container_name: private_messages
@@ -118,9 +163,21 @@ services:
       - sql
       - nginx
 
+  email_microservice:
+    container_name: email
+    build:
+      ./email_microservice
+    ports:
+      - "1000:1000"
+    networks:
+      - sql
+      - kafka
+
+
 volumes:
   database:
 
 networks:
   sql:
   nginx:
+  kafka:
