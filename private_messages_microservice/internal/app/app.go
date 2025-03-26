@@ -13,14 +13,15 @@ import (
 // StartApi Установка роутеров и запуск сервера
 func StartApi(port string) {
 	configs.InitLogrus()
-	configs.InitSettings("user", "5432", "postgres", "admin", "user")
+	configs.InitSettings("user_database", "5432", "postgres", "admin", "user")
+	configs.ConnectToBd()
 	configs.MigrateDatabase()
 	//settings.SeedFakeDataInDB(fakeDbMigrations)
 	mainRouter := transport.SetRouters()
-	configs.ConnectToBd()
 	defer configs.DatabaseConnection.Close()
 	err := http.ListenAndServe(port, mainRouter)
 	if err != nil {
-		log.Panic(err)
+		log.Error(err)
+		return
 	}
 }

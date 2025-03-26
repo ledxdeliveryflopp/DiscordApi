@@ -3,6 +3,7 @@ package configs
 import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
+	"io"
 	"os"
 )
 
@@ -14,6 +15,7 @@ func InitLogrus() {
 		log.Println("Using standard stdout for logging")
 		return
 	}
-	log.SetOutput(file)
-	log.Info("Logrus initer")
+	mw := io.MultiWriter(os.Stdout, file)
+	log.SetOutput(mw)
+	log.Info("Logrus initer in file and stdout")
 }

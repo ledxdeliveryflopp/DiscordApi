@@ -24,6 +24,6 @@ func InitSettings(host string, port string, user string, password string, name s
 	var s BaseSettings
 	s.Init(host, port, user, password, name)
 	Settings = &s
-	log.Infof("Seetings database url: %s", Settings.database.url)
+	log.Infof("Settings database url: %s", Settings.database.url)
 	return
 }

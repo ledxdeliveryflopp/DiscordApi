@@ -156,7 +156,8 @@ services:
   private_messages_microservice:
     container_name: private_messages
     build:
-      ./private_messages_microservice/build
+      context: ./private_messages_microservice/
+      dockerfile: build/Dockerfile
     ports:
       - "6000:6000"
     networks:

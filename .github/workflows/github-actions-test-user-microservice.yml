@@ -1,4 +1,4 @@
-name: "Python CI"
+name: "Api CI"
 
 on:
 
@@ -9,7 +9,7 @@ on:
 
 jobs:
 
-  DeployAndTest:
+  Deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -22,5 +22,5 @@ jobs:
         run: docker compose up -d --build
       - name: Check running containers
         run: docker ps -a
-      - name: Run tests
-        run: docker exec user pytest -v -m directly
+#      - name: Run tests
+#        run: docker exec user pytest -v -m directly

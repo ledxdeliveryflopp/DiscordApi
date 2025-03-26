@@ -19,11 +19,11 @@ func MigrateDatabase() {
 
 	db, err := sql.Open("postgres", Settings.database.url)
 	if err != nil {
-		log.Panic(err)
+		log.Error(err)
 	}
 	migration, err := migrate.Exec(db, "postgres", migrationsFolder, migrate.Up)
 	if err != nil {
-		log.Panic(err)
+		log.Error(err)
 	}
 	log.Printf("Apllied %d migration.", migration)
 }
@@ -32,11 +32,11 @@ func SeedFakeDataInDB(FakeMigrationsPath embed.FS) {
 	migrationsFolder := &migrate.EmbedFileSystemMigrationSource{FileSystem: FakeMigrationsPath, Root: "migrations/seeder"}
 	db, err := sql.Open("postgres", Settings.database.url)
 	if err != nil {
-		log.Panic(err)
+		log.Error(err)
 	}
 	migration, err := migrate.Exec(db, "postgres", migrationsFolder, migrate.Up)
 	if err != nil {
-		log.Panic(err)
+		log.Error(err)
 	}
 	log.Printf("Apllied %d seed migration.", migration)
 }
@@ -45,7 +45,7 @@ func SeedFakeDataInDB(FakeMigrationsPath embed.FS) {
 func ConnectToBd() {
 	db, err := sqlx.Open("postgres", Settings.database.url)
 	if err != nil {
-		log.Panic(err)
+		log.Error(err)
 	}
 	DatabaseConnection = db
 	return
