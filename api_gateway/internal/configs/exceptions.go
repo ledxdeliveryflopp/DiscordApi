@@ -1,4 +1,4 @@
-package settings
+package configs
 
 import (
 	"encoding/json"
@@ -16,6 +16,7 @@ func BadToken(writer http.ResponseWriter, request *http.Request) {
 		Detail: "Bad token.",
 	}
 	json.NewEncoder(writer).Encode(message)
+	return
 }
 
 func UnknownError(writer http.ResponseWriter, request *http.Request) {
@@ -25,6 +26,7 @@ func UnknownError(writer http.ResponseWriter, request *http.Request) {
 		Detail: "Unknow error.",
 	}
 	json.NewEncoder(writer).Encode(message)
+	return
 }
 
 func DeleteError(writer http.ResponseWriter, request *http.Request) {
@@ -34,4 +36,5 @@ func DeleteError(writer http.ResponseWriter, request *http.Request) {
 		Detail: "Deletion error.",
 	}
 	json.NewEncoder(writer).Encode(message)
+	return
 }

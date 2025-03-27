@@ -1,8 +1,8 @@
-package settings
+package types
 
 import "time"
 
-type TokenApi struct {
+type JwtToken struct {
 	Token  string    `json:"token"`
 	Expire time.Time `json:"expire"`
 }

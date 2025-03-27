@@ -135,7 +135,8 @@ services:
   api_gateway:
     container_name: gateway
     build:
-      ./api_gateway
+      context: ./api_gateway/
+      dockerfile: build/Dockerfile
     ports:
       - "9000:9000"
     networks:
