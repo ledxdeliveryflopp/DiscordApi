@@ -9,37 +9,37 @@ on:
 
 jobs:
 
-#  Deploy:
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Checkout code
-#        uses: actions/checkout@v4
-#      - name: Build docker sql network
-#        run: docker network create sql
-#      - name: Build docker nginx network
-#        run: docker network create nginx
-#      - name: Build docker containers
-#        run: docker compose up -d --build
-#      - name: Check running containers
-#        run: docker ps -a
-
-  Tests:
+  Deploy:
     runs-on: ubuntu-latest
     steps:
-        - name: Checkout code
-          uses: actions/checkout@v4
-        - name: Build docker sql network
-          run: docker network create sql
-        - name: Build docker nginx network
-          run: docker network create nginx
-        - name: Build user_microservice docker container
-          run: docker compose up -d --build user_microservice --wait --wait-timeout 60
-        - name: Check running container
-          run: docker ps -a
-        - name: enter in conteiner
-          run: docker exec -it user bash
-        - name: Run tests in user container
-          run: pytest
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Build docker sql network
+        run: docker network create sql
+      - name: Build docker nginx network
+        run: docker network create nginx
+      - name: Build docker containers
+        run: docker compose up -d --build
+      - name: Check running containers
+        run: docker ps -a
+
+#  Tests:
+#    runs-on: ubuntu-latest
+#    steps:
+#        - name: Checkout code
+#          uses: actions/checkout@v4
+#        - name: Build docker sql network
+#          run: docker network create sql
+#        - name: Build docker nginx network
+#          run: docker network create nginx
+#        - name: Build user_microservice docker container
+#          run: docker compose up -d --build user_microservice --wait --wait-timeout 60
+#        - name: Check running container
+#          run: docker ps -a
+#        - name: enter in conteiner
+#          run: docker exec -it user bash
+#        - name: Run tests in user container
+#          run: pytest
       #      - name: Build test report
       #        uses: simple-elf/allure-report-action@v1.7
       #        if: always()
