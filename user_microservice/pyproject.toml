@@ -44,6 +44,3 @@ pythonpath = [".", "src"]
 #    "--alluredir", "allure-results",
 #    "--clean-alluredir",
 #]
-markers = [
-    "routers: Тестирование роутеров микросервиса"
-]

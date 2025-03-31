@@ -36,8 +36,10 @@ jobs:
           run: docker compose up -d --build user_microservice --wait --wait-timeout 60
         - name: Check running container
           run: docker ps -a
+        - name: enter in conteiner
+          run: docker exec -it user bash
         - name: Run tests in user container
-          run: docker exec user pytest -v -m routers
+          run: pytest
       #      - name: Build test report
       #        uses: simple-elf/allure-report-action@v1.7
       #        if: always()

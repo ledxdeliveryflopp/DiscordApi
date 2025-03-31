@@ -1,6 +1,5 @@
 import datetime
 import allure
-import pytest
 from allure_commons.types import LabelType
 from pytest_mock import MockerFixture
 
@@ -8,7 +7,6 @@ from src.user.models import UserModel
 from user.const import MockerPathConst
 
 
-@pytest.mark.routers
 # @allure.feature('Тестирование эндпоинтов микросервиса пользователей')
 class TestUserRouter:
     png_file = {"avatar_file": ("test.png", b"image data", "image/png")}
