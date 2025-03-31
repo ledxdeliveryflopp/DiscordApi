@@ -22,19 +22,33 @@ jobs:
         run: docker compose up -d --build
       - name: Check running containers
         run: docker ps -a
-      - name: Run tests in user container
-        run: docker exec user pytest -v
-#      - name: Build test report
-#        uses: simple-elf/allure-report-action@v1.7
-#        if: always()
-#        with:
-#          gh_pages: gh-pages
-#          allure_history: allure-history
-#          allure_results: build/allure-results
-#      - name: Publish test report
-#        uses: peaceiris/actions-gh-pages@v3
-#        if: always()
-#        with:
-#          github_token: ${{ secrets.GITHUB_TOKEN }}
-#          publish_branch: gh-pages
-#          publish_dir: allure-history
+
+  Tests:
+    runs-on: ubuntu-latest
+    steps:
+        - name: Checkout code
+          uses: actions/checkout@v4
+        - name: Build docker sql network
+          run: docker network create sql
+        - name: Build docker nginx network
+          run: docker network create nginx
+        - name: Build user_microservice docker container
+          run: docker compose up -d --build user_microservice
+        - name: Check running container
+          run: docker ps -a
+        - name: Run tests in user_microservice container
+          run: docker exec user pytest
+      #      - name: Build test report
+      #        uses: simple-elf/allure-report-action@v1.7
+      #        if: always()
+      #        with:
+      #          gh_pages: gh-pages
+      #          allure_history: allure-history
+      #          allure_results: build/allure-results
+      #      - name: Publish test report
+      #        uses: peaceiris/actions-gh-pages@v3
+      #        if: always()
+      #        with:
+      #          github_token: ${{ secrets.GITHUB_TOKEN }}
+      #          publish_branch: gh-pages
+      #          publish_dir: allure-history
