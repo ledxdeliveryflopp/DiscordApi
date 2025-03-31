@@ -157,6 +157,11 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
 
+# aws config
 .aws/
 
+# static test
 static_test_templates/
+
+# Allure
+user_microservice/allure-results
