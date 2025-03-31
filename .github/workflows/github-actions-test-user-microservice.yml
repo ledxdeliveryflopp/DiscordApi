@@ -33,7 +33,7 @@ jobs:
         - name: Build docker nginx network
           run: docker network create nginx
         - name: Build user_microservice docker container
-          run: docker compose up -d --build user_microservice
+          run: docker compose up -d --build user_microservice --wait --wait-timeout 60
         - name: Check running container
           run: docker ps -a
         - name: Run tests in user_microservice container
