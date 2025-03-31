@@ -37,7 +37,7 @@ jobs:
         - name: Check running container
           run: docker ps -a
         - name: Run tests in user_microservice container
-          run: docker exec user pytest
+          run: docker-compose exec user_microservice pytest
       #      - name: Build test report
       #        uses: simple-elf/allure-report-action@v1.7
       #        if: always()
